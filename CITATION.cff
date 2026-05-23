@@ -1,0 +1,49 @@
+cff-version: 1.2.0
+message: "If you use cloudfit-core in your research, please cite it using the metadata below."
+type: software
+title: "cloudfit-core: Cloud-agnostic machine type scoring engine for computational workloads"
+abstract: >
+  cloudfit-core is a pure Python library that scores and ranks cloud instance types
+  against a workload profile using a configurable weighted scoring function with
+  hard floor filters. It supports five bioinformatics resource archetypes (I/O bound,
+  CPU bound, memory bound, GPU, and burst-parallel) and dynamic disk sizing for
+  sequencing workloads (BCLConvert, BWA-MEM2, Kraken2, AlphaFold, Nextflow).
+  Designed to be cloud-provider-agnostic via a plugin architecture compatible
+  with Terraform and OpenTofu data sources.
+authors:
+  - family-names: Kasaraneni
+    given-names: Chaitanya Krishna
+    orcid: https://orcid.org/0000-0001-5792-1095
+    email: kc.kasaraneni@gmail.com
+version: 0.1.0
+date-released: "2026-05-22"
+license: Apache-2.0
+repository-code: https://github.com/cloudfit-io/cloudfit-core
+url: https://github.com/cloudfit-io/cloudfit-core
+keywords:
+  - cloud computing
+  - bioinformatics
+  - machine type selection
+  - instance recommendation
+  - genomics
+  - workload optimization
+  - infrastructure as code
+  - terraform
+  - GCP
+  - AWS
+  - Azure
+references:
+  - type: software
+    title: samplesheet-parser
+    authors:
+      - family-names: Kasaraneni
+        given-names: Chaitanya Krishna
+        orcid: https://orcid.org/0000-0001-5792-1095
+    repository-code: https://github.com/chaitanyakasaraneni/samplesheet-parser
+  - type: software
+    title: clinops
+    authors:
+      - family-names: Kasaraneni
+        given-names: Chaitanya Krishna
+        orcid: https://orcid.org/0000-0001-5792-1095
+    repository-code: https://github.com/chaitanyakasaraneni/clinops

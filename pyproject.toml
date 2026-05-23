@@ -1,0 +1,60 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "cloudfit-core"
+version = "0.1.0"
+description = "Cloud-agnostic machine type scoring engine for computational workloads"
+readme = "README.md"
+license = { text = "Apache-2.0" }
+authors = [
+  { name = "Chaitanya Krishna Kasaraneni", email = "kc.kasaraneni@gmail.com" }
+]
+keywords = [
+  "cloud", "bioinformatics", "machine-type", "instance-recommendation",
+  "genomics", "aws", "gcp", "azure", "terraform"
+]
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "Intended Audience :: Science/Research",
+  "Intended Audience :: Developers",
+  "License :: OSI Approved :: Apache Software License",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.9",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Topic :: Scientific/Engineering :: Bio-Informatics",
+  "Topic :: System :: Systems Administration",
+]
+requires-python = ">=3.9"
+dependencies = [
+  "pydantic>=2.0",
+  "pyyaml>=6.0",
+]
+
+[project.optional-dependencies]
+dev = [
+  "pytest>=7.0",
+  "pytest-cov",
+  "ruff",
+  "mypy",
+]
+
+[project.urls]
+Homepage = "https://github.com/cloudfit-io/cloudfit-core"
+Repository = "https://github.com/cloudfit-io/cloudfit-core"
+"Bug Tracker" = "https://github.com/cloudfit-io/cloudfit-core/issues"
+"Google Scholar" = "https://scholar.google.com/citations?user=Y2S8D2UAAAAJ"
+ORCID = "https://orcid.org/0000-0001-5792-1095"
+
+[tool.hatch.build.targets.wheel]
+packages = ["cloudfit"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py39"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
