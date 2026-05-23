@@ -3,7 +3,7 @@
 [![PyPI version](https://img.shields.io/pypi/v/cloudfit-core)](https://pypi.org/project/cloudfit-core/)
 [![Python 3.9+](https://img.shields.io/badge/python-3.9+-blue)](https://pypi.org/project/cloudfit-core/)
 [![License: Apache 2.0](https://img.shields.io/badge/license-Apache%202.0-green)](LICENSE)
-[![Tests](https://github.com/cloudfit-io/cloudfit-core/actions/workflows/test.yml/badge.svg)](https://github.com/cloudfit-io/cloudfit-core/actions)
+[![Tests](https://github.com/cloudfit-io/cloudfit-core/actions/workflows/ci.yml/badge.svg)](https://github.com/cloudfit-io/cloudfit-core/actions)
 
 **Cloud-agnostic machine type scoring engine for computational workloads.**
 
