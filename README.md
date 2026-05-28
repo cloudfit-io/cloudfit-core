@@ -233,6 +233,25 @@ resource "google_compute_instance" "worker" {
 
 ---
 
+## Known limitations
+
+cloudfit-core is at v0.1.0 and ships with documented gaps. Listed here in priority order, with planned mitigations. The math is open and auditable; these are not surprises, they are the v0.2 backlog.
+
+| Limitation | Impact | v0.2 plan |
+|---|---|---|
+| **Performance scorer caps at 2× the requested size.** With `optimize_for: performance`, top picks cluster at 2× capacity even when the workload would fit at 1×. Use `optimize_for: cost` for exact-fit sizing today. | Over-recommends headroom in performance mode | Smoother saturation curve. Factor in CPU generation, clock speed, memory bandwidth, network interconnect |
+| **GCP-only provider.** No AWS, Azure, or other cloud catalogs yet. | Cannot rank AWS/Azure instances | `cloudfit-provider-aws` is the next planned provider (DescribeInstanceTypes + Pricing API) |
+| **No commitments awareness.** CUDs, Savings Plans, and Reserved Instances are not factored. Recommendations are based on on-demand prices. | Inflated effective cost for customers with committed spend | Caller-provided `commitments` payload, computed `effective_price_hr` |
+| **No quota / capacity awareness.** A recommendation may be technically valid but unlaunchable in a region with exhausted quota. | "Stuck in queue" failures | Optional `quota_snapshot` payload that hard-floors candidates exceeding remaining quota |
+| **No GPU type discrimination.** Only `gpu_count` and `gpu_vram_gb` are scored. A100 vs H100 vs L4 vs T4 look the same if VRAM matches. | GPU recommendations may miss the right SKU for modern ML | GPU SKU as a scored dimension with TFLOPS and memory-bandwidth lookups |
+| **No CPU generation factor.** A first-gen and third-gen instance with the same vCPU count score identically on perf. | Underweights modern instances that deliver more work per core | Add generation and architecture multipliers to the perf scorer |
+| **Bundled snapshots are static.** `cloudfit-api` ships with a 267-instance JSON refreshed manually via `cloudfit-provider-gcp`. | Pricing drifts over time | Live registry refreshed hourly, versioned with provenance (`fetched_at`, `source_etag`) |
+| **No empirical validation.** The scoring model is documented and auditable but has not been backtested against historical batch outcomes. | Recommendations are model predictions, not evidence-backed claims | Backtest harness ingesting Nextflow / Cromwell run history to compare cloudfit picks against actual run results |
+
+A complete self-audit covering UX, operations, scoring methodology, and the v0.2 roadmap will be published alongside the next release. Issues and PRs that surface additional gaps are welcome — see [CONTRIBUTING.md](CONTRIBUTING.md).
+
+---
+
 ## Citing cloudfit-core
 
 If you use cloudfit-core in your research, please cite it:
