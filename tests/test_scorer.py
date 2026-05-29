@@ -57,3 +57,33 @@ def test_score_between_zero_and_one():
     results = rank(BCLCONVERT, CANDIDATES)
     for r in results:
         assert 0.0 <= r.score <= 1.0
+
+
+def test_region_hard_floor_disqualifies_other_regions():
+    """When profile.region is set, instances in other regions are disqualified."""
+    profile = WorkloadProfile(vcpu=16, ram_gb=64, region="us-central1")
+    candidates = [
+        MachineType(id="n2-standard-16", provider="gcp", vcpu=16, ram_gb=64, price_hr=0.78, region="us-central1"),
+        MachineType(id="n2-standard-16", provider="gcp", vcpu=16, ram_gb=64, price_hr=0.84, region="europe-west4"),
+        MachineType(id="n2-standard-16", provider="gcp", vcpu=16, ram_gb=64, price_hr=0.92, region="asia-southeast1"),
+    ]
+    results = rank(profile, candidates)
+    qualified = [r for r in results if not r.disqualified]
+    disqualified = [r for r in results if r.disqualified]
+    assert len(qualified) == 1
+    assert qualified[0].instance.region == "us-central1"
+    assert len(disqualified) == 2
+    for r in disqualified:
+        assert "region" in r.disqualify_reason.lower()
+
+
+def test_no_region_allows_all_regions():
+    """When profile.region is None, instances from all regions pass the floor."""
+    profile = WorkloadProfile(vcpu=16, ram_gb=64)  # no region set
+    candidates = [
+        MachineType(id="n2-standard-16", provider="gcp", vcpu=16, ram_gb=64, price_hr=0.78, region="us-central1"),
+        MachineType(id="n2-standard-16", provider="gcp", vcpu=16, ram_gb=64, price_hr=0.84, region="europe-west4"),
+    ]
+    results = rank(profile, candidates)
+    qualified = [r for r in results if not r.disqualified]
+    assert len(qualified) == 2

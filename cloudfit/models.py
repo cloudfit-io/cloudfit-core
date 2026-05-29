@@ -52,6 +52,10 @@ class WorkloadProfile(BaseModel):
     scheduling: SchedulingSpec = Field(default_factory=SchedulingSpec)
     optimize_for: OptimizeFor = OptimizeFor.balanced
     providers: list[str] = Field(default_factory=lambda: ["gcp", "aws"])
+    region: Optional[str] = Field(
+        default=None,
+        description="If set, only instances available in this region pass the hard floor.",
+    )
     weights: Optional[dict[str, float]] = None
 
 

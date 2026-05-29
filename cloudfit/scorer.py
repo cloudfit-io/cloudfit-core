@@ -48,6 +48,8 @@ def _avail_score(instance: MachineType) -> float:
 
 def _hard_floor_check(instance: MachineType, profile: WorkloadProfile) -> str | None:
     """Return a disqualify reason string if this instance fails any hard floor."""
+    if profile.region is not None and instance.region != profile.region:
+        return f"Instance not available in region {profile.region!r} (this entry: {instance.region!r})"
     floor_ram = profile.ram_floor_gb if profile.ram_floor_gb is not None else profile.ram_gb
     if instance.ram_gb < floor_ram:
         return f"RAM {instance.ram_gb} GB < required {floor_ram} GB"
@@ -66,7 +68,7 @@ def _hard_floor_check(instance: MachineType, profile: WorkloadProfile) -> str | 
                 f"< required {profile.gpu.vram_gb} GB"
             )
     if instance.status == "tombstoned":
-        return f"Instance {instance.id!r} is tombstoned — no longer available"
+        return f"Instance {instance.id!r} is tombstoned, no longer available"
     return None
 
 

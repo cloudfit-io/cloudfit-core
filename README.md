@@ -69,6 +69,21 @@ c7i.24xlarge                    score=0.00  $4.28/hr
 requested 224 GB — it's eliminated by the hard floor filter, not just ranked low
 (see [How scoring works](#how-scoring-works)).
 
+### Region-aware filtering (new in 0.2)
+
+Set `region` on the workload profile to restrict candidates to a specific region. The hard floor disqualifies anything not available there, before scoring runs.
+
+```python
+profile = WorkloadProfile(
+    vcpu=16,
+    ram_gb=64,
+    region="asia-southeast1",   # only instances tagged with this region pass the floor
+    optimize_for="cost",
+)
+```
+
+This pairs naturally with multi-region provider snapshots: `cloudfit-provider-gcp.fetch_instances_all_regions(...)` emits one `MachineType` entry per region the family is available in, and the region hard floor selects the right subset at scoring time. Useful when a pipeline runs in a specific region and you only want candidates that can actually launch there.
+
 ---
 
 ## How scoring works
