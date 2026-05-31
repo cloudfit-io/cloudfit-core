@@ -56,8 +56,8 @@ _bump:
 tag:
 	@v="$(CURRENT_VERSION)"; \
 	if git rev-parse "v$$v" >/dev/null 2>&1; then echo "tag v$$v already exists"; exit 1; fi; \
-	git tag "v$$v"; \
-	echo "created tag v$$v  (push with: git push origin v$$v)"
+	git tag -a "v$$v" -m "Release v$$v"; \
+	echo "created annotated tag v$$v  (push with: git push --follow-tags)"
 
 test:
 	@pytest

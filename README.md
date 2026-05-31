@@ -9,6 +9,8 @@
 
 `cloudfit-core` is the foundation of the [cloudfit](https://github.com/cloudfit-io) ecosystem — a pure Python library that, given a workload profile, scores and ranks available cloud instances across providers. No cloud credentials required. No API calls. Just a workload spec in, ranked recommendations out.
 
+> **Try it without installing anything.** [One-click UI](https://chaitanyakasaraneni-cloudfit-ui.hf.space) for the form-driven try · [Swagger docs](https://chaitanyakasaraneni-cloudfit-api.hf.space/docs) for the API · [Landing page](https://cloudfit-io.github.io) for the visual tour.
+
 ---
 
 ## The problem
@@ -295,6 +297,15 @@ GitHub also shows a **Cite this repository** button in the sidebar (powered by `
 ---
 
 ## Related projects
+
+In the cloudfit ecosystem:
+
+- [`cloudfit-provider-gcp`](https://github.com/cloudfit-io/cloudfit-provider-gcp) — GCP Compute Engine machine-type fetcher (live PyPI)
+- [`cloudfit-provider-aws`](https://github.com/cloudfit-io/cloudfit-provider-aws) — AWS EC2 fetcher (planning phase, accepting feedback)
+- [`cloudfit-api`](https://github.com/cloudfit-io/cloudfit-api) — Stateless FastAPI service over cloudfit-core ([live demo](https://chaitanyakasaraneni-cloudfit-api.hf.space/docs))
+- [`cloudfit-ui`](https://github.com/cloudfit-io/cloudfit-ui) — One-click Gradio demo over cloudfit-core ([live demo](https://chaitanyakasaraneni-cloudfit-ui.hf.space))
+
+Other open-source work:
 
 - [`samplesheet-parser`](https://github.com/chaitanyakasaraneni/samplesheet-parser) — Format-agnostic Illumina SampleSheet parser (BCLConvert V2 + IEM V1)
 - [`clinops`](https://github.com/chaitanyakasaraneni/clinops) — Clinical ML data quality library
