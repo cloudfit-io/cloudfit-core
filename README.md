@@ -7,7 +7,7 @@
 
 **Cloud-agnostic machine type scoring engine for computational workloads.**
 
-`cloudfit-core` is the foundation of the [cloudfit](https://github.com/cloudfit-io) ecosystem — a pure Python library that, given a workload profile, scores and ranks available cloud instances across providers. No cloud credentials required. No API calls. Just a workload spec in, ranked recommendations out.
+`cloudfit-core` is the foundation of the [cloudfit](https://github.com/cloudfit-io) ecosystem: a pure Python library that, given a workload profile, scores and ranks available cloud instances across providers. No cloud credentials required. No API calls. Just a workload spec in, ranked recommendations out.
 
 > **Try it without installing anything.** [One-click UI](https://chaitanyakasaraneni-cloudfit-ui.hf.space) for the form-driven try · [Swagger docs](https://chaitanyakasaraneni-cloudfit-api.hf.space/docs) for the API · [Landing page](https://cloudfit-io.github.io) for the visual tour.
 
@@ -15,7 +15,7 @@
 
 ## The problem
 
-Teams hardcode instance types (`c2-standard-60`, `c7i.16xlarge`) in infrastructure-as-code. When providers deprecate them or release better generations, nothing updates — costs drift and performance degrades silently. There is no open-source tool that takes a workload description and returns the best available instance across AWS, GCP, and Azure with explainable scoring.
+Teams hardcode instance types (`c2-standard-60`, `c7i.16xlarge`) in infrastructure-as-code. When providers deprecate them or release better generations, nothing updates: costs drift and performance degrades silently. There is no open-source tool that takes a workload description and returns the best available instance across AWS, GCP, and Azure with explainable scoring.
 
 cloudfit-core is that scoring engine.
 
@@ -68,7 +68,7 @@ c7i.24xlarge                    score=0.00  $4.28/hr
 ```
 
 `c7i.24xlarge` scores `0.00` and ranks last because its 192 GB RAM is below the
-requested 224 GB — it's eliminated by the hard floor filter, not just ranked low
+requested 224 GB: it's eliminated by the hard floor filter, not just ranked low
 (see [How scoring works](#how-scoring-works)).
 
 ### Region-aware filtering (new in 0.2)
@@ -101,11 +101,11 @@ The `optimize_for` mode sets the weights:
 | Mode | w_cost | w_perf | w_avail | Best for |
 |---|---|---|---|---|
 | `cost` | 0.70 | 0.20 | 0.10 | Batch jobs, dev environments |
-| `balanced` | 0.33 | 0.34 | 0.33 | Default — production workloads |
+| `balanced` | 0.33 | 0.34 | 0.33 | Default: production workloads |
 | `performance` | 0.10 | 0.80 | 0.10 | Latency-sensitive, GPU inference |
 | `availability` | 0.10 | 0.20 | 0.70 | Long-running jobs, deprecation risk |
 
-**Hard floor filters** run before scoring — instances that don't meet minimum RAM, vCPU, or GPU requirements are eliminated entirely, not just ranked low.
+**Hard floor filters** run before scoring: instances that don't meet minimum RAM, vCPU, or GPU requirements are eliminated entirely, not just ranked low.
 
 Advanced users can override weights directly:
 
@@ -165,7 +165,7 @@ profile = WorkloadProfile(
 )
 ```
 
-`compute_disk_tb` is a standalone helper — call it before constructing your `WorkloadProfile` and pass the result into `DiskSpec.scratch_tb`.
+`compute_disk_tb` is a standalone helper: call it before constructing your `WorkloadProfile` and pass the result into `DiskSpec.scratch_tb`.
 
 ---
 
@@ -209,7 +209,7 @@ results = rank(profile, candidates)
 
 ## Provider plugins
 
-`cloudfit-core` is the scoring engine only — it scores whatever instances you give it. Provider plugins fetch live instance data from cloud APIs on a schedule and feed the registry:
+`cloudfit-core` is the scoring engine only: it scores whatever instances you give it. Provider plugins fetch live instance data from cloud APIs on a schedule and feed the registry:
 
 ```bash
 pip install cloudfit-provider-gcp   # fetches GCP Compute Engine machine types
@@ -264,7 +264,7 @@ cloudfit-core is at v0.3.0 and ships with documented gaps. Listed here in priori
 | **Bundled snapshots are static.** `cloudfit-api` ships with an 875-instance, five-region JSON refreshed manually via `cloudfit-provider-gcp`. | Pricing drifts over time | Live registry refreshed hourly, versioned with provenance (`fetched_at`, `source_etag`) |
 | **No empirical validation.** The scoring model is documented and auditable but has not been backtested against historical batch outcomes. | Recommendations are model predictions, not evidence-backed claims | Backtest harness ingesting Nextflow / Cromwell run history to compare cloudfit picks against actual run results |
 
-A complete self-audit covering UX, operations, scoring methodology, and the v0.2 roadmap will be published alongside the next release. Issues and PRs that surface additional gaps are welcome — see [CONTRIBUTING.md](CONTRIBUTING.md).
+A complete self-audit covering UX, operations, scoring methodology, and the v0.2 roadmap will be published alongside the next release. Issues and PRs that surface additional gaps are welcome: see [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ---
 
@@ -299,15 +299,15 @@ GitHub also shows a **Cite this repository** button in the sidebar (powered by `
 
 In the cloudfit ecosystem:
 
-- [`cloudfit-provider-gcp`](https://github.com/cloudfit-io/cloudfit-provider-gcp) — GCP Compute Engine machine-type fetcher (live PyPI)
-- [`cloudfit-provider-aws`](https://github.com/cloudfit-io/cloudfit-provider-aws) — AWS EC2 fetcher (planning phase, accepting feedback)
-- [`cloudfit-api`](https://github.com/cloudfit-io/cloudfit-api) — Stateless FastAPI service over cloudfit-core ([live demo](https://chaitanyakasaraneni-cloudfit-api.hf.space/docs))
-- [`cloudfit-ui`](https://github.com/cloudfit-io/cloudfit-ui) — One-click Gradio demo over cloudfit-core ([live demo](https://chaitanyakasaraneni-cloudfit-ui.hf.space))
+- [`cloudfit-provider-gcp`](https://github.com/cloudfit-io/cloudfit-provider-gcp): GCP Compute Engine machine-type fetcher (live PyPI)
+- [`cloudfit-provider-aws`](https://github.com/cloudfit-io/cloudfit-provider-aws): AWS EC2 fetcher (planning phase, accepting feedback)
+- [`cloudfit-api`](https://github.com/cloudfit-io/cloudfit-api): Stateless FastAPI service over cloudfit-core ([live demo](https://chaitanyakasaraneni-cloudfit-api.hf.space/docs))
+- [`cloudfit-ui`](https://github.com/cloudfit-io/cloudfit-ui): One-click Gradio demo over cloudfit-core ([live demo](https://chaitanyakasaraneni-cloudfit-ui.hf.space))
 
 Other open-source work:
 
-- [`samplesheet-parser`](https://github.com/chaitanyakasaraneni/samplesheet-parser) — Format-agnostic Illumina SampleSheet parser (BCLConvert V2 + IEM V1)
-- [`clinops`](https://github.com/chaitanyakasaraneni/clinops) — Clinical ML data quality library
+- [`samplesheet-parser`](https://github.com/chaitanyakasaraneni/samplesheet-parser): Format-agnostic Illumina SampleSheet parser (BCLConvert V2 + IEM V1)
+- [`clinops`](https://github.com/chaitanyakasaraneni/clinops): Clinical ML data quality library
 
 ---
 
@@ -316,7 +316,7 @@ Other open-source work:
 ```
 cloudfit-core/
 ├── README.md               # first thing every visitor reads
-├── CITATION.cff            # GitHub "Cite this repository" button — ORCID linked
+├── CITATION.cff            # GitHub "Cite this repository" button: ORCID linked
 ├── pyproject.toml          # packaging, dependencies, PyPI metadata
 ├── CONTRIBUTING.md         # provider plugin interface guide
 ├── LICENSE                 # Apache 2.0
@@ -326,12 +326,12 @@ cloudfit-core/
 │   ├── __init__.py         # exports rank, recommend, key models
 │   ├── models.py           # WorkloadProfile, MachineType, ScoredInstance (pydantic v2)
 │   ├── scorer.py           # rank(), score_instance(), weight matrix
-│   ├── filter.py           # hard_floor_check() — RAM, vCPU, GPU hard filters
-│   ├── disk.py             # compute_disk_tb() — dynamic disk sizing formula
-│   ├── yaml_loader.py      # from_yaml() — loads workload YAML schema
+│   ├── filter.py           # hard_floor_check(): RAM, vCPU, GPU hard filters
+│   ├── disk.py             # compute_disk_tb(): dynamic disk sizing formula
+│   ├── yaml_loader.py      # from_yaml(): loads workload YAML schema
 │   └── providers/
 │       ├── __init__.py
-│       └── base.py         # abstract Provider class — plugin contract
+│       └── base.py         # abstract Provider class: plugin contract
 │
 └── tests/
     ├── test_scorer.py      # rank, scores, weight modes, hard floors
@@ -343,11 +343,11 @@ cloudfit-core/
 
 ## Contributing
 
-See [CONTRIBUTING.md](CONTRIBUTING.md). Issues and pull requests are welcome — especially provider plugins for new cloud platforms (Azure, Hetzner, Oracle Cloud).
+See [CONTRIBUTING.md](CONTRIBUTING.md). Issues and pull requests are welcome: especially provider plugins for new cloud platforms (Azure, Hetzner, Oracle Cloud).
 
 ## License
 
-Apache 2.0 — see [LICENSE](LICENSE).
+Apache 2.0: see [LICENSE](LICENSE).
 
 ---
 

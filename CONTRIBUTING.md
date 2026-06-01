@@ -4,11 +4,11 @@ Thank you for your interest in contributing. cloudfit-core is an early-stage ope
 
 ## Ways to contribute
 
-- **Bug reports** — open an issue with a minimal reproducible example
-- **Provider plugins** — build a `cloudfit-provider-*` package for a new cloud (Azure, Hetzner, Oracle Cloud, etc.)
-- **Workload profiles** — add new bioinformatics tool profiles to the archetype registry
-- **Benchmarks** — real-world performance data to improve `perf_score` accuracy
-- **Documentation** — examples, tutorials, corrections
+- **Bug reports**: open an issue with a minimal reproducible example
+- **Provider plugins**: build a `cloudfit-provider-*` package for a new cloud (Azure, Hetzner, Oracle Cloud, etc.)
+- **Workload profiles**: add new bioinformatics tool profiles to the archetype registry
+- **Benchmarks**: real-world performance data to improve `perf_score` accuracy
+- **Documentation**: examples, tutorials, corrections
 
 ## Development setup
 
@@ -21,7 +21,7 @@ pytest
 
 ## Pull request guidelines
 
-- Keep PRs focused — one feature or fix per PR
+- Keep PRs focused: one feature or fix per PR
 - Add tests for new scoring logic
 - Run `pytest` and `ruff check .` before submitting
 - Update `CITATION.cff` version if releasing
