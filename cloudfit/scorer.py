@@ -13,6 +13,13 @@ WEIGHT_MATRIX: dict[str, dict[str, float]] = {
 # Max price reference for normalizing cost score (~$35/hr covers most instances)
 _MAX_PRICE_HR = 35.0
 
+# Performance scoring (fit-based): peak at exact match plus a healthy headroom
+# band (1.0x-1.5x, matching common cloud-sizing practice), then linear decay to
+# 0 at well-oversized (3.5x). Replaces the pre-0.3 behavior, which capped at 2x
+# and structurally rewarded oversize.
+_PERF_IDEAL_RATIO_MAX = 1.5
+_PERF_DECAY_END_RATIO = 3.5
+
 # Normalize long-form weight keys to short internal keys.
 # Users may pass "performance" or "availability" (as documented in README);
 # the engine uses "perf" and "avail" internally.
@@ -32,11 +39,26 @@ def _cost_score(instance: MachineType) -> float:
     return max(0.0, 1.0 - (instance.price_hr / _MAX_PRICE_HR))
 
 
+def _fit(have: float, want: float) -> float:
+    """Score how well `have` fits `want`. Peak at 1.0x-1.5x, decays beyond.
+
+    Under 1.0x returns 0 (under-spec); the hard floor disqualifies these before
+    they reach the scorer in normal flow, but we return 0 defensively.
+    """
+    if want <= 0:
+        return 1.0
+    ratio = have / want
+    if ratio < 1.0:
+        return 0.0
+    if ratio <= _PERF_IDEAL_RATIO_MAX:
+        return 1.0
+    span = _PERF_DECAY_END_RATIO - _PERF_IDEAL_RATIO_MAX
+    return max(0.0, 1.0 - (ratio - _PERF_IDEAL_RATIO_MAX) / span)
+
+
 def _perf_score(instance: MachineType, profile: WorkloadProfile) -> float:
-    """Higher vCPU + RAM density relative to request → higher score."""
-    vcpu_ratio = min(instance.vcpu / max(profile.vcpu, 1), 2.0) / 2.0
-    ram_ratio  = min(instance.ram_gb / max(profile.ram_gb, 1), 2.0) / 2.0
-    return vcpu_ratio * 0.5 + ram_ratio * 0.5
+    """Reward instances that fit the request. Exact match wins; oversize is penalized."""
+    return 0.5 * _fit(instance.vcpu, profile.vcpu) + 0.5 * _fit(instance.ram_gb, profile.ram_gb)
 
 
 def _avail_score(instance: MachineType) -> float:

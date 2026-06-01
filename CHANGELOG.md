@@ -5,6 +5,18 @@ All notable changes to `cloudfit-core` are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.0] - 2026-05-31
+
+### Changed
+- **Performance scorer is now fit-based.** Replaces the pre-0.3 behavior, which capped at 2x the requested size and structurally rewarded oversize (an exact match scored 0.5; a 2x-oversize instance scored 1.0). The new `_perf_score` peaks at exact match plus a healthy headroom band (1.0x-1.5x of requested vCPU/RAM), then decays linearly to 0 at 3.5x. This matches common cloud-sizing practice and removes the "balanced mode picks the 2x machine" behavior. Behavior change is intentional and resolves the "performance scorer headroom heuristic" item in the README's Known Limitations.
+
+### Added
+- `_PERF_IDEAL_RATIO_MAX` and `_PERF_DECAY_END_RATIO` constants in `scorer.py`, exposed as tuning knobs for future calibration.
+- Three tests covering the new fit behavior: balanced mode prefers exact fit over 2x, perf_score saturates inside the 1.0x-1.5x band, and perf_score is 0 at heavy oversize.
+
+### Removed
+- The "Performance scorer caps at 2× the requested size" line from the README's Known Limitations table.
+
 ## [0.2.0] - 2026-05-28
 
 ### Added
@@ -44,6 +56,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Provider plugin interface (`cloudfit.providers.base.Provider`) for community-built provider packages.
 - Apache 2.0 license. CITATION.cff for academic citation.
 
+[0.3.0]: https://github.com/cloudfit-io/cloudfit-core/releases/tag/v0.3.0
 [0.2.0]: https://github.com/cloudfit-io/cloudfit-core/releases/tag/v0.2.0
 [0.1.3]: https://github.com/cloudfit-io/cloudfit-core/releases/tag/v0.1.3
 [0.1.2]: https://github.com/cloudfit-io/cloudfit-core/releases/tag/v0.1.2

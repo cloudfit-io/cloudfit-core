@@ -15,8 +15,8 @@ authors:
     given-names: Chaitanya Krishna
     orcid: https://orcid.org/0000-0001-5792-1095
     email: kc.kasaraneni@gmail.com
-version: 0.2.0
-date-released: "2026-05-28"
+version: 0.3.0
+date-released: "2026-05-31"
 license: Apache-2.0
 repository-code: https://github.com/cloudfit-io/cloudfit-core
 url: https://github.com/cloudfit-io/cloudfit-core

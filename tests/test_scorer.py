@@ -87,3 +87,42 @@ def test_no_region_allows_all_regions():
     results = rank(profile, candidates)
     qualified = [r for r in results if not r.disqualified]
     assert len(qualified) == 2
+
+
+# --- fit-based perf_score (0.3.0) ---
+
+def test_balanced_mode_prefers_exact_fit_over_oversize():
+    """The headline 0.3.0 fix: 'balanced' picks the exact match, not the 2x oversize."""
+    profile = WorkloadProfile(vcpu=16, ram_gb=64, optimize_for=OptimizeFor.balanced)
+    candidates = [
+        MachineType(id="exact", provider="gcp", vcpu=16, ram_gb=64,  price_hr=0.78),
+        MachineType(id="2x",    provider="gcp", vcpu=32, ram_gb=128, price_hr=1.55),
+        MachineType(id="4x",    provider="gcp", vcpu=64, ram_gb=256, price_hr=3.10),
+    ]
+    results = rank(profile, candidates)
+    qualified = [r for r in results if not r.disqualified]
+    assert qualified[0].instance.id == "exact"
+    assert qualified[1].instance.id == "2x"
+    assert qualified[2].instance.id == "4x"
+
+
+def test_perf_score_max_within_ideal_band():
+    """Instances at 1.0x to 1.5x of requested resources score perf == 1.0."""
+    profile = WorkloadProfile(vcpu=16, ram_gb=64, optimize_for=OptimizeFor.performance)
+    candidates = [
+        MachineType(id="exact",     provider="gcp", vcpu=16, ram_gb=64, price_hr=0.78),
+        MachineType(id="headroom",  provider="gcp", vcpu=24, ram_gb=96, price_hr=1.10),
+    ]
+    results = rank(profile, candidates)
+    # Both fit inside the ideal band so perf_score == 1.0 for both;
+    # cost breaks the tie in favor of the cheaper exact match.
+    assert results[0].perf_score == 1.0
+    assert results[1].perf_score == 1.0
+
+
+def test_perf_score_zero_for_heavy_oversize():
+    """At >=3.5x the requested size, perf_score is fully penalized (0.0)."""
+    profile = WorkloadProfile(vcpu=8, ram_gb=16, optimize_for=OptimizeFor.performance)
+    heavy = MachineType(id="huge", provider="gcp", vcpu=64, ram_gb=256, price_hr=3.10)  # 8x / 16x
+    results = rank(profile, [heavy])
+    assert results[0].perf_score == 0.0
