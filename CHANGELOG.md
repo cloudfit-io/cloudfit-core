@@ -5,6 +5,26 @@ All notable changes to `cloudfit-core` are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.0] - 2026-06-02
+
+### Changed
+- **Cost scoring is now candidate-relative.** `_cost_score` normalizes against the min/max price of the qualifying candidates (cheapest = 1.0, most expensive = 0.0) instead of a
+fixed `$35/hr` reference. The old normalizer compressed realistic prices into the top ~3% of the scale, so a 35% price gap moved the score by ~0.02. Note: composite scores are now a
+within-query ranking signal and are not comparable across separate `rank()` calls; use price for cross-query comparison.
+- `scorer.py` now imports the canonical `hard_floor_check` from `filter.py` instead of carrying its own private copy.
+- README: corrected the quick-start example output (now pinned by a test), rewrote "The problem" around the no-telemetry niche and GCP-only scope, made the `archetype` "does not
+change ranking" disclaimer prominent, and added a validation caveat to the disk-sizing section.
+
+### Added
+- `score_instance(..., price_range=...)` keyword-only argument; `rank()` supplies it automatically.
+- Tests: `test_cost_score_spreads_across_candidate_range`, `test_unpriced_instance_is_not_treated_as_free`, `test_readme_headline_example_matches_docs`.
+
+### Fixed
+- Unpriced instances (`price_hr <= 0`) no longer receive the maximum cost score; they score 0.0 and are excluded from cost normalization.
+
+### Removed
+- Duplicate `_hard_floor_check` in `scorer.py`.
+
 ## [0.3.0] - 2026-05-31
 
 ### Changed
