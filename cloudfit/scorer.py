@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 from .models import WorkloadProfile, MachineType, ScoredInstance, OptimizeFor
+from .filter import hard_floor_check
 
 WEIGHT_MATRIX: dict[str, dict[str, float]] = {
     OptimizeFor.cost:         {"cost": 0.70, "perf": 0.20, "avail": 0.10},
@@ -10,7 +11,9 @@ WEIGHT_MATRIX: dict[str, dict[str, float]] = {
     OptimizeFor.availability: {"cost": 0.10, "perf": 0.20, "avail": 0.70},
 }
 
-# Max price reference for normalizing cost score (~$35/hr covers most instances)
+# Fallback price reference, used only when score_instance() is called standalone
+# without a candidate price range (e.g. scoring a single instance). rank()
+# always supplies a candidate-relative range, which is the preferred path.
 _MAX_PRICE_HR = 35.0
 
 # Performance scoring (fit-based): peak at exact match plus a healthy headroom
@@ -34,9 +37,35 @@ def _normalize_weights(weights: dict[str, float]) -> dict[str, float]:
     return {_KEY_ALIASES.get(k, k): v for k, v in weights.items()}
 
 
-def _cost_score(instance: MachineType) -> float:
-    """Lower price → higher score. Normalized 0–1."""
-    return max(0.0, 1.0 - (instance.price_hr / _MAX_PRICE_HR))
+def _price_range(candidates: list[MachineType]) -> tuple[float, float] | None:
+    """Min and max price across priced candidates, used to normalize cost.
+
+    Unpriced instances (price_hr <= 0) are excluded: a missing price is not a
+    free instance and must not anchor the bottom of the range. Returns None when
+    no candidate carries a usable price.
+    """
+    prices = [c.price_hr for c in candidates if c.price_hr > 0]
+    if not prices:
+        return None
+    return (min(prices), max(prices))
+
+
+def _cost_score(instance: MachineType, price_range: tuple[float, float] | None) -> float:
+    """Cost score in 0-1. Cheapest candidate scores 1.0, most expensive 0.0.
+
+    Candidate-relative normalization spreads the qualified set across the full
+    range, so a real price gap moves the score. An unpriced instance
+    (price_hr <= 0) scores 0.0: a missing price is never treated as free. When
+    no range is available (standalone scoring), fall back to a fixed reference.
+    """
+    if instance.price_hr <= 0:
+        return 0.0
+    if price_range is None:
+        return max(0.0, 1.0 - (instance.price_hr / _MAX_PRICE_HR))
+    floor, ceiling = price_range
+    if ceiling <= floor:
+        return 1.0
+    return max(0.0, min(1.0, (ceiling - instance.price_hr) / (ceiling - floor)))
 
 
 def _fit(have: float, want: float) -> float:
@@ -68,39 +97,23 @@ def _avail_score(instance: MachineType) -> float:
     )
 
 
-def _hard_floor_check(instance: MachineType, profile: WorkloadProfile) -> str | None:
-    """Return a disqualify reason string if this instance fails any hard floor."""
-    if profile.region is not None and instance.region != profile.region:
-        return f"Instance not available in region {profile.region!r} (this entry: {instance.region!r})"
-    floor_ram = profile.ram_floor_gb if profile.ram_floor_gb is not None else profile.ram_gb
-    if instance.ram_gb < floor_ram:
-        return f"RAM {instance.ram_gb} GB < required {floor_ram} GB"
-    if instance.vcpu < profile.vcpu:
-        return f"vCPU {instance.vcpu} < required {profile.vcpu}"
-    if profile.gpu.required:
-        if instance.gpu_count == 0:
-            return "GPU required but not available"
-        if (
-            profile.gpu.vram_gb is not None
-            and instance.gpu_vram_gb is not None
-            and instance.gpu_vram_gb < profile.gpu.vram_gb
-        ):
-            return (
-                f"GPU VRAM {instance.gpu_vram_gb} GB "
-                f"< required {profile.gpu.vram_gb} GB"
-            )
-    if instance.status == "tombstoned":
-        return f"Instance {instance.id!r} is tombstoned, no longer available"
-    return None
-
-
-def score_instance(instance: MachineType, profile: WorkloadProfile) -> ScoredInstance:
+def score_instance(
+    instance: MachineType,
+    profile: WorkloadProfile,
+    *,
+    price_range: tuple[float, float] | None = None,
+) -> ScoredInstance:
     """Score a single instance against a workload profile.
 
     Returns a ScoredInstance with composite score and sub-scores.
     Disqualified instances have score=0.0 and disqualified=True.
+
+    `price_range` is the (min, max) price of the candidate set, used to
+    normalize the cost score across the actual options. rank() supplies it
+    automatically; callers scoring a lone instance can omit it and a fixed
+    reference is used instead.
     """
-    reason = _hard_floor_check(instance, profile)
+    reason = hard_floor_check(instance, profile)
     if reason:
         return ScoredInstance(
             instance=instance, score=0.0,
@@ -111,7 +124,7 @@ def score_instance(instance: MachineType, profile: WorkloadProfile) -> ScoredIns
     raw_weights = profile.weights or WEIGHT_MATRIX[profile.optimize_for]
     weights = _normalize_weights(raw_weights)
 
-    c = _cost_score(instance)
+    c = _cost_score(instance, price_range)
     p = _perf_score(instance, profile)
     a = _avail_score(instance)
 
@@ -130,7 +143,7 @@ def score_instance(instance: MachineType, profile: WorkloadProfile) -> ScoredIns
     )
 
 
-# Alias — both names are public API
+# Alias, both names are public API
 score = score_instance
 
 
@@ -142,9 +155,17 @@ def rank(
 
     Qualified instances are returned first, sorted by score descending.
     Disqualified instances appear at the end (score=0.0).
+
+    Cost is normalized across the qualified, priced candidates so the cheapest
+    qualifying option scores 1.0 and the most expensive 0.0.
     """
-    scored = [score_instance(m, profile) for m in candidates]
-    qualified    = sorted(
+    qualified_priced = [
+        m for m in candidates if hard_floor_check(m, profile) is None
+    ]
+    price_range = _price_range(qualified_priced)
+
+    scored = [score_instance(m, profile, price_range=price_range) for m in candidates]
+    qualified = sorted(
         [s for s in scored if not s.disqualified],
         key=lambda s: s.score,
         reverse=True,

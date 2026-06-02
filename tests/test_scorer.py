@@ -126,3 +126,63 @@ def test_perf_score_zero_for_heavy_oversize():
     heavy = MachineType(id="huge", provider="gcp", vcpu=64, ram_gb=256, price_hr=3.10)  # 8x / 16x
     results = rank(profile, [heavy])
     assert results[0].perf_score == 0.0
+
+
+# --- candidate-relative cost normalization (0.3.x) ---
+
+def test_cost_score_spreads_across_candidate_range():
+    """Cheapest qualifying candidate scores 1.0 on cost, most expensive 0.0.
+
+    Regression for the fixed-$35 normalizer, which compressed a 35% price gap
+    into a ~0.02 cost-score difference. Cost must now span the full range.
+    """
+    profile = WorkloadProfile(vcpu=16, ram_gb=64, optimize_for=OptimizeFor.cost)
+    candidates = [
+        MachineType(id="cheap",  provider="gcp", vcpu=16, ram_gb=64, price_hr=2.31),
+        MachineType(id="mid",    provider="gcp", vcpu=16, ram_gb=64, price_hr=2.85),
+        MachineType(id="dear",   provider="gcp", vcpu=16, ram_gb=64, price_hr=3.39),
+    ]
+    by_id = {r.instance.id: r for r in rank(profile, candidates)}
+    assert by_id["cheap"].cost_score == 1.0
+    assert by_id["dear"].cost_score == 0.0
+    assert 0.0 < by_id["mid"].cost_score < 1.0
+
+
+def test_unpriced_instance_is_not_treated_as_free():
+    """An instance with price_hr <= 0 (pricing lookup failed) must not win on cost.
+
+    Regression for the old normalizer, where price 0.0 yielded the maximum cost
+    score (1.0) and could rank an unpriced instance first.
+    """
+    profile = WorkloadProfile(vcpu=16, ram_gb=64, optimize_for=OptimizeFor.cost)
+    candidates = [
+        MachineType(id="priced",   provider="gcp", vcpu=16, ram_gb=64, price_hr=2.50),
+        MachineType(id="unpriced", provider="gcp", vcpu=16, ram_gb=64, price_hr=0.0),
+    ]
+    results = rank(profile, candidates)
+    by_id = {r.instance.id: r for r in results}
+    assert by_id["unpriced"].cost_score == 0.0
+    assert results[0].instance.id == "priced"
+
+
+def test_readme_headline_example_matches_docs():
+    """Pin the README quick-start numbers to CI so docs cannot silently drift.
+
+    If this fails, either the scoring changed (update the README output block)
+    or the README was edited by hand to numbers the engine does not produce.
+    """
+    profile = WorkloadProfile(vcpu=60, ram_gb=224, workload="io-intensive",
+                              archetype="io", optimize_for=OptimizeFor.balanced)
+    candidates = [
+        MachineType(id="c2-standard-60",       provider="gcp", vcpu=60, ram_gb=240, price_hr=3.13),
+        MachineType(id="c3d-standard-60-lssd", provider="gcp", vcpu=60, ram_gb=240, price_hr=3.39),
+        MachineType(id="t2d-standard-60",      provider="gcp", vcpu=60, ram_gb=240, price_hr=2.31),
+        MachineType(id="c7i.24xlarge",         provider="aws", vcpu=96, ram_gb=192, price_hr=4.28),
+    ]
+    shown = [(r.instance.id, round(r.score, 2)) for r in rank(profile, candidates)]
+    assert shown == [
+        ("t2d-standard-60", 1.00),
+        ("c2-standard-60", 0.75),
+        ("c3d-standard-60-lssd", 0.67),
+        ("c7i.24xlarge", 0.00),
+    ]

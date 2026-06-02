@@ -15,9 +15,13 @@
 
 ## The problem
 
-Teams hardcode instance types (`c2-standard-60`, `c7i.16xlarge`) in infrastructure-as-code. When providers deprecate them or release better generations, nothing updates: costs drift and performance degrades silently. There is no open-source tool that takes a workload description and returns the best available instance across AWS, GCP, and Azure with explainable scoring.
+Teams hardcode instance types (`c2-standard-60`, `c7i.16xlarge`) in infrastructure-as-code and pipeline configs. When a provider deprecates them or ships a better generation, nothing updates: cost drifts and performance degrades silently.
 
-cloudfit-core is that scoring engine.
+The free, on-by-default right-sizing tools (GCP Recommender, AWS Compute Optimizer) read live telemetry from instances that are **already running**. They cannot size the workloads that need a decision *before* they run: batch jobs, ephemeral pipelines, and pre-launch services that have no telemetry yet. That gap is the niche cloudfit targets.
+
+cloudfit-core takes a declared workload profile (vCPU, RAM, GPU) and returns ranked, explainable instance recommendations, with no running instance and no telemetry required.
+
+> **Scope today:** the scoring engine is provider-agnostic (it ranks whatever candidates you give it), but the only live provider catalog shipped is GCP, via [`cloudfit-provider-gcp`](https://github.com/cloudfit-io/cloudfit-provider-gcp). AWS is planned, not yet released.
 
 ---
 
@@ -61,9 +65,9 @@ for r in results:
 
 Output:
 ```
-t2d-standard-60                 score=0.81  $2.31/hr
-c2-standard-60                  score=0.81  $3.13/hr
-c3d-standard-60-lssd            score=0.80  $3.39/hr
+t2d-standard-60                 score=1.00  $2.31/hr
+c2-standard-60                  score=0.75  $3.13/hr
+c3d-standard-60-lssd            score=0.67  $3.39/hr
 c7i.24xlarge                    score=0.00  $4.28/hr
 ```
 
@@ -107,6 +111,8 @@ The `optimize_for` mode sets the weights:
 
 **Hard floor filters** run before scoring: instances that don't meet minimum RAM, vCPU, or GPU requirements are eliminated entirely, not just ranked low.
 
+**Cost is normalized across the candidates**, not against a fixed scale: the cheapest qualifying instance scores 1.0 on cost and the most expensive scores 0.0, so a real price gap produces a real score gap. An instance with no price (`price_hr <= 0`, e.g. a pricing lookup that failed) scores 0.0 on cost; a missing price is never treated as free.
+
 Advanced users can override weights directly:
 
 ```python
@@ -124,7 +130,16 @@ profile = WorkloadProfile(
 
 ## Workload archetypes
 
-cloudfit-core understands five resource archetypes, each reflecting a different dominant constraint:
+> **What `archetype` does today:** it is a classification label used for disk
+> sizing and downstream tooling. **It does not change ranking.** Scoring is
+> driven entirely by `optimize_for` and the hard floors. Archetype-aware
+> scoring (and fleet-vs-single-instance recommendations for `burst`) is on the
+> roadmap and gated on validation data, so it is not wired into the scorer yet.
+> Setting `archetype="mem"` will not, on its own, bias the ranking toward
+> high-memory families in this release.
+
+cloudfit-core recognizes five resource archetypes. The "dominant constraint"
+column below describes the workload, not a scoring rule the engine applies:
 
 | Archetype | Dominant constraint | Typical workloads |
 |---|---|---|
@@ -132,15 +147,15 @@ cloudfit-core understands five resource archetypes, each reflecting a different 
 | `cpu` | Thread parallelism | Variant calling, de novo assembly, quantification |
 | `mem` | RAM capacity | Metagenomics classification, single-cell RNA-seq, Hi-C |
 | `gpu` | GPU VRAM | Protein structure prediction, GPU variant calling, basecalling |
-| `burst` | Fleet × small instances | Nextflow pipelines, Snakemake DAGs, WDL scatter-gather |
-
-In this release the archetype is recorded on the workload profile for classification and downstream tooling; scoring weights are driven by `optimize_for`. Archetype-aware weighting and fleet-vs-single-instance recommendations (e.g. many small spot instances for `burst`) are planned for a future release.
+| `burst` | Fleet of small instances | Nextflow pipelines, Snakemake DAGs, WDL scatter-gather |
 
 ---
 
 ## Dynamic disk sizing
 
-For sequencing workloads, disk requirements scale with experiment parameters rather than being fixed. cloudfit-core computes disk from first principles:
+For sequencing workloads, disk requirements scale with experiment parameters rather than being fixed. cloudfit-core estimates disk from experiment parameters:
+
+> **These are planning estimates, not measurements.** The per-lane sizes and the output/tmp/compression multipliers in [`disk.py`](cloudfit/disk.py) are approximate heuristics, not validated against a corpus of real runs. Treat the result as a starting point for provisioning (the default 20% safety margin exists for this reason), and verify against your own pipeline before relying on it.
 
 ```python
 from cloudfit import compute_disk_tb, WorkloadProfile, DiskSpec
