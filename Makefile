@@ -6,6 +6,7 @@ PKG       := cloudfit
 PYPROJECT := pyproject.toml
 INIT      := $(PKG)/__init__.py
 CITATION  := CITATION.cff
+CHANGELOG := CHANGELOG.md
 
 CURRENT_VERSION := $(shell sed -n -E 's/^version = "([0-9]+\.[0-9]+\.[0-9]+)".*/\1/p' $(PYPROJECT) | head -1)
 
@@ -15,7 +16,7 @@ CURRENT_VERSION := $(shell sed -n -E 's/^version = "([0-9]+\.[0-9]+\.[0-9]+)".*/
 help:
 	@echo "cloudfit-core — current version: $(CURRENT_VERSION)"
 	@echo ""
-	@echo "Version bumping (syncs pyproject.toml, $(INIT), CITATION.cff):"
+	@echo "Version bumping (syncs $(PYPROJECT), $(INIT), $(CITATION); rolls $(CHANGELOG)):"
 	@echo "  make patch    patch bump (x.y.Z)"
 	@echo "  make minor    minor bump (x.Y.0)"
 	@echo "  make major    major bump (X.0.0)"
@@ -49,9 +50,16 @@ _bump:
 	sed -E 's/^version = "[0-9]+\.[0-9]+\.[0-9]+"/version = "'"$$new"'"/' $(PYPROJECT) > $(PYPROJECT).tmp && mv $(PYPROJECT).tmp $(PYPROJECT); \
 	sed -E 's/^__version__ = "[0-9]+\.[0-9]+\.[0-9]+"/__version__ = "'"$$new"'"/' $(INIT) > $(INIT).tmp && mv $(INIT).tmp $(INIT); \
 	sed -E -e 's/^version: .*/version: '"$$new"'/' -e 's/^date-released: .*/date-released: "'"$$today"'"/' $(CITATION) > $(CITATION).tmp && mv $(CITATION).tmp $(CITATION); \
+	cl_note=""; \
+	if [ -f $(CHANGELOG) ] && grep -q '^## \[Unreleased\]' $(CHANGELOG); then \
+	  awk -v v="$$new" -v d="$$today" '!done && /^## \[Unreleased\]/ {print "## [Unreleased]"; print ""; print "_No unreleased changes._"; print ""; print "## [" v "] - " d; done=1; next} {print}' $(CHANGELOG) > $(CHANGELOG).tmp && mv $(CHANGELOG).tmp $(CHANGELOG); \
+	  cl_note=", $(CHANGELOG)"; \
+	else \
+	  cl_note=" (warning: no [Unreleased] section in $(CHANGELOG) — not rolled)"; \
+	fi; \
 	echo "Bumped $$cur -> $$new  (date-released: $$today)"; \
-	echo "  updated: $(PYPROJECT), $(INIT), $(CITATION)"; \
-	echo "Next: git commit -am \"release v$$new\" && make tag && git push --follow-tags"
+	echo "  updated: $(PYPROJECT), $(INIT), $(CITATION)$$cl_note"; \
+	echo "Next: review $(CHANGELOG), then: git commit -am \"release v$$new\" && make tag && git push --follow-tags"
 
 tag:
 	@v="$(CURRENT_VERSION)"; \
