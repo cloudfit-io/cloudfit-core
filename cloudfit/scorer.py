@@ -86,8 +86,16 @@ def _fit(have: float, want: float) -> float:
 
 
 def _perf_score(instance: MachineType, profile: WorkloadProfile) -> float:
-    """Reward instances that fit the request. Exact match wins; oversize is penalized."""
-    return 0.5 * _fit(instance.vcpu, profile.vcpu) + 0.5 * _fit(instance.ram_gb, profile.ram_gb)
+    """Reward instances that fit the request. Exact match wins; oversize is penalized.
+
+    Fit is measured against the headroom-adjusted target (declared * (1 + headroom)),
+    so when headroom is set the peak band recenters on the buffered size. With the
+    default headroom=0 the target equals the declared request.
+    """
+    return (
+        0.5 * _fit(instance.vcpu, profile.perf_target_vcpu)
+        + 0.5 * _fit(instance.ram_gb, profile.perf_target_ram_gb)
+    )
 
 
 def _avail_score(instance: MachineType) -> float:

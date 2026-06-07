@@ -6,6 +6,7 @@ from .models import (
     ScoredInstance,
     OptimizeFor,
     Archetype,
+    HeadroomMode,
     DiskSpec,
     GPUSpec,
     SchedulingSpec,
@@ -15,14 +16,14 @@ from .filter import hard_floor_check, apply_floors
 from .disk import compute_disk_tb, compute_disk_breakdown, list_sequencers
 from .yaml_loader import from_yaml, from_dict
 
-__version__ = "0.4.0"
+__version__ = "0.5.0"
 __author__ = "Chaitanya Krishna Kasaraneni"
 __license__ = "Apache-2.0"
 
 __all__ = [
     # models
     "WorkloadProfile", "MachineType", "ScoredInstance",
-    "OptimizeFor", "Archetype", "DiskSpec", "GPUSpec", "SchedulingSpec",
+    "OptimizeFor", "Archetype", "HeadroomMode", "DiskSpec", "GPUSpec", "SchedulingSpec",
     # scorer — both names are public API
     "rank", "score_instance", "score",
     # filter

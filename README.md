@@ -126,6 +126,28 @@ profile = WorkloadProfile(
 )
 ```
 
+### Headroom (new in 0.5)
+
+`headroom` asks for spare capacity above your declared `vcpu` and `ram_gb`, as a fraction. It is the compute sibling of the disk `safety_margin`. The default is `0.0` (no headroom), so existing behavior is unchanged.
+
+```python
+profile = WorkloadProfile(
+    vcpu=60,
+    ram_gb=224,
+    headroom=0.15,                 # aim for 15% spare capacity
+    headroom_mode="hard",          # "hard" (default) or "soft"
+)
+```
+
+Two modes control how strictly the buffer is applied. With `headroom=h`, the target is `declared × (1 + h)`.
+
+| Mode | Hard floor | Perf scoring | Use when |
+|---|---|---|---|
+| `hard` (default) | Raised to the target: instances without the buffer are **disqualified** | Peak fit recenters on the target | You need the slack guaranteed |
+| `soft` | Unchanged: nothing is disqualified | Peak fit recenters on the target, so instances below it lose fit credit but can still rank on cost or availability | You prefer the buffer but will accept a tight fit |
+
+When both `headroom` and `ram_floor_gb` are set, the RAM floor is the larger of the two (`max(ram_floor_gb, ram_gb × (1 + headroom))`).
+
 ---
 
 ## Workload archetypes

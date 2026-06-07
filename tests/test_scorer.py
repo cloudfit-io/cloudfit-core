@@ -1,7 +1,7 @@
 """Tests for the cloudfit-core scoring engine."""
 
 import pytest
-from cloudfit import rank, WorkloadProfile, MachineType, OptimizeFor
+from cloudfit import rank, WorkloadProfile, MachineType, OptimizeFor, HeadroomMode
 
 
 CANDIDATES = [
@@ -163,6 +163,69 @@ def test_unpriced_instance_is_not_treated_as_free():
     by_id = {r.instance.id: r for r in results}
     assert by_id["unpriced"].cost_score == 0.0
     assert results[0].instance.id == "priced"
+
+
+# --- user-provided headroom (0.5.0) ---
+
+def test_headroom_default_is_a_noop():
+    """With no headroom, floors and perf are identical to the pre-headroom engine."""
+    plain = WorkloadProfile(vcpu=16, ram_gb=64, optimize_for=OptimizeFor.balanced)
+    hr0 = WorkloadProfile(vcpu=16, ram_gb=64, optimize_for=OptimizeFor.balanced, headroom=0.0)
+    assert [r.score for r in rank(plain, CANDIDATES)] == [r.score for r in rank(hr0, CANDIDATES)]
+
+
+def test_headroom_hard_disqualifies_exact_fit():
+    """Hard mode raises the floor: an instance meeting only the declared spec is disqualified."""
+    profile = WorkloadProfile(vcpu=16, ram_gb=64, headroom=0.5, headroom_mode=HeadroomMode.hard)
+    candidates = [
+        MachineType(id="exact",    provider="gcp", vcpu=16, ram_gb=64, price_hr=0.78),
+        MachineType(id="buffered", provider="gcp", vcpu=24, ram_gb=96, price_hr=1.10),
+    ]
+    by_id = {r.instance.id: r for r in rank(profile, candidates)}
+    assert by_id["exact"].disqualified
+    assert "96" in by_id["exact"].disqualify_reason  # floor raised to the buffered target
+    assert not by_id["buffered"].disqualified
+    assert by_id["buffered"].perf_score == 1.0  # buffered target is the new exact fit
+
+
+def test_headroom_soft_keeps_but_penalizes_exact_fit():
+    """Soft mode never disqualifies; sub-target instances lose perf-fit credit instead."""
+    profile = WorkloadProfile(
+        vcpu=16, ram_gb=64, headroom=0.5,
+        headroom_mode=HeadroomMode.soft, optimize_for=OptimizeFor.performance,
+    )
+    candidates = [
+        MachineType(id="exact",    provider="gcp", vcpu=16, ram_gb=64, price_hr=0.78),
+        MachineType(id="buffered", provider="gcp", vcpu=24, ram_gb=96, price_hr=1.10),
+    ]
+    results = rank(profile, candidates)
+    by_id = {r.instance.id: r for r in results}
+    assert not by_id["exact"].disqualified          # kept
+    assert by_id["exact"].perf_score == 0.0         # below the buffered target
+    assert by_id["buffered"].perf_score == 1.0
+    assert results[0].instance.id == "buffered"     # preference wins under performance mode
+
+
+def test_headroom_hard_floor_takes_max_with_ram_floor_gb():
+    """When both are set, the RAM floor is max(ram_floor_gb, headroom target)."""
+    # headroom target 64 * 1.5 = 96 exceeds the explicit ram_floor_gb of 70
+    profile = WorkloadProfile(
+        vcpu=8, ram_gb=64, ram_floor_gb=70, headroom=0.5, headroom_mode=HeadroomMode.hard,
+    )
+    assert profile.effective_ram_floor_gb == 96.0
+    under = MachineType(id="under", provider="gcp", vcpu=16, ram_gb=80, price_hr=1.0)
+    ok = MachineType(id="ok",       provider="gcp", vcpu=16, ram_gb=96, price_hr=1.2)
+    by_id = {r.instance.id: r for r in rank(profile, [under, ok])}
+    assert by_id["under"].disqualified
+    assert not by_id["ok"].disqualified
+
+
+def test_headroom_zero_preserves_sub_nominal_ram_floor():
+    """Regression: with headroom=0, an explicit ram_floor_gb below ram_gb is honored."""
+    profile = WorkloadProfile(vcpu=8, ram_gb=224, ram_floor_gb=200)
+    assert profile.effective_ram_floor_gb == 200.0
+    inst = MachineType(id="lean", provider="gcp", vcpu=16, ram_gb=210, price_hr=1.0)
+    assert not rank(profile, [inst])[0].disqualified
 
 
 def test_readme_headline_example_matches_docs():

@@ -5,6 +5,18 @@ All notable changes to `cloudfit-core` are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.0] - Unreleased
+
+### Added
+- **User-provided compute headroom.** `WorkloadProfile.headroom` (fraction, default `0.0`) requests spare capacity above the declared `vcpu`/`ram_gb`, the compute sibling of the disk `safety_margin`. `headroom_mode` selects how it is applied: `hard` (default) raises the hard floor so instances without the buffer are disqualified, and `soft` recenters perf scoring only without disqualifying anything. Both modes recenter the perf fit peak on the buffered target (`declared * (1 + headroom)`).
+- `WorkloadProfile` helper properties: `perf_target_vcpu`, `perf_target_ram_gb`, `effective_vcpu_floor`, `effective_ram_floor_gb`.
+- `HeadroomMode` enum is now exported from the package root.
+- `from_dict` / `from_yaml` read `headroom` (under `resources`) and `headroom_mode` (under `workload`).
+- Tests covering hard/soft modes, the `max(ram_floor_gb, headroom target)` tie-break, and the headroom=0 no-op guarantee.
+
+### Notes
+- Backward compatible: with the default `headroom=0.0`, floors and scores are identical to 0.4.0. When both `headroom` and `ram_floor_gb` are set, the RAM floor is `max(ram_floor_gb, ram_gb * (1 + headroom))`.
+
 ## [0.4.0] - 2026-06-02
 
 ### Changed

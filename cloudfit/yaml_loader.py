@@ -13,6 +13,7 @@ Schema example
       resources:
         vcpu: 60
         ram_gb: 224
+        headroom: 0.15          # optional spare capacity above vcpu/ram_gb
         disk:
           sizing: dynamic
           scratch_tb: 18
@@ -26,6 +27,7 @@ Schema example
         restart_tolerant: false
 
       optimize_for: balanced
+      headroom_mode: hard      # hard (default) or soft
       providers:
         - gcp
         - aws
@@ -50,6 +52,7 @@ from .models import (
     SchedulingSpec,
     OptimizeFor,
     Archetype,
+    HeadroomMode,
 )
 
 
@@ -136,6 +139,8 @@ def from_dict(data: dict[str, Any]) -> WorkloadProfile:
         vcpu=int(vcpu),
         ram_gb=float(ram_gb),
         ram_floor_gb=resources.get("ram_floor_gb"),
+        headroom=float(resources.get("headroom", 0.0)),
+        headroom_mode=HeadroomMode(w.get("headroom_mode", "hard")),
         workload=w.get("type", "generic"),
         archetype=Archetype(w.get("archetype", "cpu")),
         tool=w.get("tool"),
