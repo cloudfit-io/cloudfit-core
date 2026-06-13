@@ -148,3 +148,20 @@ class TestFromDict:
                     "resources": {"vcpu": 4, "ram_gb": 16}
                 }
             })
+
+
+class TestMalformedYaml:
+    def test_empty_yaml_raises_value_error(self):
+        p = _write_tmp("")
+        with pytest.raises(ValueError):
+            from_yaml(p)
+
+    def test_scalar_yaml_raises_value_error(self):
+        p = _write_tmp("hello\n")
+        with pytest.raises(ValueError):
+            from_yaml(p)
+
+    def test_list_yaml_raises_value_error(self):
+        p = _write_tmp("- a\n- b\n")
+        with pytest.raises(ValueError):
+            from_yaml(p)

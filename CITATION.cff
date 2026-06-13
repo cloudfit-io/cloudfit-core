@@ -5,9 +5,10 @@ title: "cloudfit-core: Cloud-agnostic machine type scoring engine for computatio
 abstract: >
   cloudfit-core is a pure Python library that scores and ranks cloud instance types
   against a workload profile using a configurable weighted scoring function with
-  hard floor filters. It supports five bioinformatics resource archetypes (I/O bound,
-  CPU bound, memory bound, GPU, and burst-parallel) and dynamic disk sizing for
-  sequencing workloads (BCLConvert, BWA-MEM2, Kraken2, AlphaFold, Nextflow).
+  hard floor filters. Five resource archetypes (I/O bound, CPU bound, memory bound,
+  GPU, and burst-parallel) set the per-component perf weighting, so the ranking
+  emphasizes the dimension that dominates each workload. It also provides dynamic
+  disk sizing for sequencing demultiplexing runs from experiment parameters.
   Designed to be cloud-provider-agnostic via a plugin architecture compatible
   with Terraform and OpenTofu data sources.
 authors:
@@ -15,8 +16,8 @@ authors:
     given-names: Chaitanya Krishna
     orcid: https://orcid.org/0000-0001-5792-1095
     email: kc.kasaraneni@gmail.com
-version: 0.4.0
-date-released: "2026-06-02"
+version: 0.6.0
+date-released: "2026-06-11"
 license: Apache-2.0
 repository-code: https://github.com/cloudfit-io/cloudfit-core
 url: https://github.com/cloudfit-io/cloudfit-core

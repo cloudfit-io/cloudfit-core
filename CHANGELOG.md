@@ -5,7 +5,28 @@ All notable changes to `cloudfit-core` are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.5.0] - Unreleased
+## [0.6.0] - 2026-06-11
+
+### Fixed
+- **`compute_disk_tb` no longer returns 0.0 for small runs.** The TB result is rounded to 4 decimals instead of 2, so sub-5 GB runs (MiSeq Nano, micro) report a real non-zero figure. `compute_disk_breakdown` now raises `ValueError` for `lanes < 1`.
+- **FASTQ output sizing is now independent of input compression.** Compressed-format flowcells (NovaSeq X) shrink the stored input only; demultiplexed output is derived from the raw uncompressed size, fixing the understated disk estimate for compressed runs.
+- **Custom weights are validated.** `WorkloadProfile` now rejects partial, negative, and non-normalized weight dicts (must sum to 1.0 within 1e-6) instead of silently producing scores outside `[0, 1]`. Long-form keys (`performance`/`availability`) are accepted and normalized.
+- **Unknown fields are rejected.** All five models use `extra="forbid"`, so a mistyped field raises `ValidationError` rather than being silently dropped. The YAML loader still tolerates unknown keys, so schema typos do not break file loading.
+- **`from_dict` / `from_yaml` raise `ValueError`** (not `AttributeError`) for empty, scalar, or list YAML input.
+
+### Changed
+- **Archetype now drives perf weighting.** `_perf_score` weights vCPU, RAM, local SSD (vs `scratch_tb`), and GPU VRAM per archetype (`io`/`cpu`/`mem`/`gpu`/`burst`). A component with no declared requirement fits perfectly and does not distort the score, so prior examples with no `scratch_tb` rank identically. This is a behavior change for workloads whose archetype-dominant dimension differs across candidates.
+- `archetype` and `optimize_for` accept `str` as well as their enum types, matching the documented string-based call style under static type checking.
+
+### Added
+- `py.typed` marker so downstream packages (cloudfit-provider-gcp, cloudfit-api) can type-check against cloudfit-core under `mypy --strict`.
+- Tests for disk small-run sizing, weight validation, `extra="forbid"`, malformed-YAML handling, and archetype-dependent ranking.
+
+### Removed
+- `Provider.get_availability` from the abstract contract: the engine reads availability from `MachineType.status`. Providers convey availability by setting that field.
+- Unused `samples` parameter from `compute_disk_tb` / `compute_disk_breakdown`.
+
+## [0.5.0] - 2026-06-07
 
 ### Added
 - **User-provided compute headroom.** `WorkloadProfile.headroom` (fraction, default `0.0`) requests spare capacity above the declared `vcpu`/`ram_gb`, the compute sibling of the disk `safety_margin`. `headroom_mode` selects how it is applied: `hard` (default) raises the hard floor so instances without the buffer are disqualified, and `soft` recenters perf scoring only without disqualifying anything. Both modes recenter the perf fit peak on the buffered target (`declared * (1 + headroom)`).
@@ -88,6 +109,9 @@ change ranking" disclaimer prominent, and added a validation caveat to the disk-
 - Provider plugin interface (`cloudfit.providers.base.Provider`) for community-built provider packages.
 - Apache 2.0 license. CITATION.cff for academic citation.
 
+[0.6.0]: https://github.com/cloudfit-io/cloudfit-core/releases/tag/v0.6.0
+[0.5.0]: https://github.com/cloudfit-io/cloudfit-core/releases/tag/v0.5.0
+[0.4.0]: https://github.com/cloudfit-io/cloudfit-core/releases/tag/v0.4.0
 [0.3.0]: https://github.com/cloudfit-io/cloudfit-core/releases/tag/v0.3.0
 [0.2.0]: https://github.com/cloudfit-io/cloudfit-core/releases/tag/v0.2.0
 [0.1.3]: https://github.com/cloudfit-io/cloudfit-core/releases/tag/v0.1.3

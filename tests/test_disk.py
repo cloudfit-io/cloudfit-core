@@ -15,10 +15,13 @@ class TestComputeDiskTb:
         tb = compute_disk_tb("novaseq_6000", "s4", lanes=4)
         assert 14 <= tb <= 22, f"Expected 14–22 TB for S4/4L, got {tb}"
 
-    def test_miseq_nano_is_small(self):
-        # Nano is a tiny run — should be well under 5 GB
+    def test_miseq_nano_returns_nonzero_disk(self):
         tb = compute_disk_tb("miseq", "nano", lanes=1)
-        assert tb < 0.01, f"MiSeq Nano should be < 0.01 TB, got {tb}"
+        assert 0.001 < tb < 0.01, f"Expected 0.001-0.01 TB, got {tb}"
+
+    def test_lanes_below_one_raises(self):
+        with pytest.raises(ValueError, match="lanes must be >= 1"):
+            compute_disk_tb("miseq", "nano", lanes=0)
 
     def test_compressed_input_smaller_than_uncompressed_equivalent(self):
         # Compressed input format is 4x smaller — input_gb should be lower

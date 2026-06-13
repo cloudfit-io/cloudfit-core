@@ -152,24 +152,25 @@ When both `headroom` and `ram_floor_gb` are set, the RAM floor is the larger of 
 
 ## Workload archetypes
 
-> **What `archetype` does today:** it is a classification label used for disk
-> sizing and downstream tooling. **It does not change ranking.** Scoring is
-> driven entirely by `optimize_for` and the hard floors. Archetype-aware
-> scoring (and fleet-vs-single-instance recommendations for `burst`) is on the
-> roadmap and gated on validation data, so it is not wired into the scorer yet.
-> Setting `archetype="mem"` will not, on its own, bias the ranking toward
-> high-memory families in this release.
+> **What `archetype` does today:** it sets the per-component weighting of the
+> performance score, so the ranking emphasizes the dimension that dominates the
+> workload. `cpu` weights vCPU fit, `mem` weights RAM fit, `io` weights local
+> SSD against the declared `scratch_tb`, and `gpu` weights GPU VRAM fit. The
+> weights are heuristics, not yet calibrated against validation data, and the
+> hard floors and `optimize_for` weights still apply on top. Fleet-vs-single
+> recommendations for `burst` remain on the roadmap; `burst` currently weights
+> vCPU and RAM equally.
 
 cloudfit-core recognizes five resource archetypes. The "dominant constraint"
-column below describes the workload, not a scoring rule the engine applies:
+column drives the perf weighting the engine applies for that archetype:
 
-| Archetype | Dominant constraint | Typical workloads |
-|---|---|---|
-| `io` | Disk throughput | Sequencing demultiplexing, short-read alignment |
-| `cpu` | Thread parallelism | Variant calling, de novo assembly, quantification |
-| `mem` | RAM capacity | Metagenomics classification, single-cell RNA-seq, Hi-C |
-| `gpu` | GPU VRAM | Protein structure prediction, GPU variant calling, basecalling |
-| `burst` | Fleet of small instances | Nextflow pipelines, Snakemake DAGs, WDL scatter-gather |
+| Archetype | Dominant constraint | Perf weighting | Typical workloads |
+|---|---|---|---|
+| `io` | Disk throughput | vCPU 0.3 / RAM 0.3 / local SSD 0.4 | Sequencing demultiplexing, short-read alignment |
+| `cpu` | Thread parallelism | vCPU 0.7 / RAM 0.3 | Variant calling, de novo assembly, quantification |
+| `mem` | RAM capacity | vCPU 0.2 / RAM 0.8 | Metagenomics classification, single-cell RNA-seq, Hi-C |
+| `gpu` | GPU VRAM | vCPU 0.1 / RAM 0.1 / GPU VRAM 0.8 | Protein structure prediction, GPU variant calling, basecalling |
+| `burst` | Fleet of small instances | vCPU 0.5 / RAM 0.5 | Nextflow pipelines, Snakemake DAGs, WDL scatter-gather |
 
 ---
 
@@ -261,8 +262,11 @@ from cloudfit.providers.base import Provider
 class MyProvider(Provider):
     def fetch_instances(self, region: str) -> list[MachineType]: ...
     def get_pricing(self, instance_id: str, region: str) -> float: ...
-    def get_availability(self, instance_id: str, region: str) -> float: ...
 ```
+
+Availability is carried by each `MachineType.status` (`active` / `deprecated` /
+`tombstoned`), so the provider sets it when building instances; the engine does
+not call a separate availability method.
 
 Want to add a provider? See [CONTRIBUTING.md](CONTRIBUTING.md).
 
@@ -289,7 +293,7 @@ resource "google_compute_instance" "worker" {
 
 ## Known limitations
 
-cloudfit-core is at v0.3.0 and ships with documented gaps. Listed here in priority order, with planned mitigations. The math is open and auditable; these are not surprises, they are the next-release backlog.
+cloudfit-core is at v0.6.0 and ships with documented gaps. Listed here in priority order, with planned mitigations. The math is open and auditable; these are not surprises, they are the next-release backlog.
 
 | Limitation | Impact | Planned mitigation |
 |---|---|---|
@@ -301,7 +305,7 @@ cloudfit-core is at v0.3.0 and ships with documented gaps. Listed here in priori
 | **Bundled snapshots are static.** `cloudfit-api` ships with an 875-instance, five-region JSON refreshed manually via `cloudfit-provider-gcp`. | Pricing drifts over time | Live registry refreshed hourly, versioned with provenance (`fetched_at`, `source_etag`) |
 | **No empirical validation.** The scoring model is documented and auditable but has not been backtested against historical batch outcomes. | Recommendations are model predictions, not evidence-backed claims | Backtest harness ingesting Nextflow / Cromwell run history to compare cloudfit picks against actual run results |
 
-A complete self-audit covering UX, operations, scoring methodology, and the v0.2 roadmap will be published alongside the next release. Issues and PRs that surface additional gaps are welcome: see [CONTRIBUTING.md](CONTRIBUTING.md).
+A complete self-audit covering UX, operations, scoring methodology, and the roadmap will be published alongside the next release. Issues and PRs that surface additional gaps are welcome: see [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ---
 

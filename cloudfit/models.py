@@ -3,7 +3,11 @@
 from __future__ import annotations
 from enum import Enum
 from typing import Optional
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
+
+# Weight key aliases and the canonical key set used by the scorer.
+_WEIGHT_ALIASES: dict[str, str] = {"performance": "perf", "availability": "avail"}
+_WEIGHT_KEYS: tuple[str, ...] = ("cost", "perf", "avail")
 
 
 class OptimizeFor(str, Enum):
@@ -27,11 +31,15 @@ class HeadroomMode(str, Enum):
 
 
 class GPUSpec(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
     required: bool = False
     vram_gb: Optional[int] = None
 
 
 class DiskSpec(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
     sizing: str = "static"
     scratch_tb: Optional[float] = None
     preferred: str = "network_ssd"
@@ -39,12 +47,16 @@ class DiskSpec(BaseModel):
 
 
 class SchedulingSpec(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
     spot: bool = False
     restart_tolerant: bool = False
 
 
 class WorkloadProfile(BaseModel):
     """Describes the resource requirements of a computational workload."""
+    model_config = ConfigDict(extra="forbid")
+
     vcpu: int = Field(gt=0)
     ram_gb: float = Field(gt=0)
     ram_floor_gb: Optional[float] = None
@@ -58,19 +70,31 @@ class WorkloadProfile(BaseModel):
         description="hard: raise the floor and recenter perf; soft: recenter perf only.",
     )
     workload: str = "generic"
-    archetype: Archetype = Archetype.cpu
+    archetype: Archetype | str = Archetype.cpu
     tool: Optional[str] = None
     parallelism: str = "sample"
     disk: DiskSpec = Field(default_factory=DiskSpec)
     gpu: GPUSpec = Field(default_factory=GPUSpec)
     scheduling: SchedulingSpec = Field(default_factory=SchedulingSpec)
-    optimize_for: OptimizeFor = OptimizeFor.balanced
+    optimize_for: OptimizeFor | str = OptimizeFor.balanced
     providers: list[str] = Field(default_factory=lambda: ["gcp", "aws"])
     region: Optional[str] = Field(
         default=None,
         description="If set, only instances available in this region pass the hard floor.",
     )
     weights: Optional[dict[str, float]] = None
+
+    @field_validator("archetype", mode="before")
+    @classmethod
+    def _coerce_archetype(cls, v: object) -> Archetype:
+        """Coerce a string to Archetype, raising on an unknown value."""
+        return v if isinstance(v, Archetype) else Archetype(v)
+
+    @field_validator("optimize_for", mode="before")
+    @classmethod
+    def _coerce_optimize_for(cls, v: object) -> OptimizeFor:
+        """Coerce a string to OptimizeFor, raising on an unknown value."""
+        return v if isinstance(v, OptimizeFor) else OptimizeFor(v)
 
     @property
     def perf_target_vcpu(self) -> float:
@@ -102,9 +126,47 @@ class WorkloadProfile(BaseModel):
             return max(base, self.perf_target_ram_gb)
         return base
 
+    @model_validator(mode="after")
+    def _validate_weights(self) -> "WorkloadProfile":
+        """Normalize and validate custom weights.
+
+        Accepts long-form keys (performance/availability), requires all three
+        keys (cost, perf, avail) or none, rejects negative values, and requires
+        the weights to sum to 1.0 within a small tolerance. Stores the result
+        back with the canonical short keys so the scorer can consume it directly.
+        """
+        if self.weights is None:
+            return self
+
+        normalized = {_WEIGHT_ALIASES.get(k, k): v for k, v in self.weights.items()}
+
+        unknown = set(normalized) - set(_WEIGHT_KEYS)
+        if unknown:
+            raise ValueError(
+                f"Unknown weight keys: {sorted(unknown)}. "
+                f"Allowed: {list(_WEIGHT_KEYS)} (or performance/availability)."
+            )
+        if set(normalized) != set(_WEIGHT_KEYS):
+            raise ValueError(
+                f"weights must include all of {list(_WEIGHT_KEYS)} or none; "
+                f"got {sorted(normalized)}."
+            )
+        for key, value in normalized.items():
+            if value < 0:
+                raise ValueError(f"weight {key!r} must be non-negative, got {value}.")
+
+        total = sum(normalized.values())
+        if abs(total - 1.0) > 1e-6:
+            raise ValueError(f"weights must sum to 1.0 (within 1e-6), got {total}.")
+
+        object.__setattr__(self, "weights", normalized)
+        return self
+
 
 class MachineType(BaseModel):
     """A cloud provider machine type with specs and pricing."""
+    model_config = ConfigDict(extra="forbid")
+
     id: str
     provider: str
     vcpu: int

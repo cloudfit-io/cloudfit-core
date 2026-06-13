@@ -94,7 +94,6 @@ def compute_disk_tb(
     flowcell: str,
     lanes: int,
     *,
-    samples: int = 96,
     retain_input: bool = False,
     keep_undetermined: bool = False,
     safety_margin: float = 0.20,
@@ -105,7 +104,6 @@ def compute_disk_tb(
         sequencer:          Sequencer model key (e.g. "novaseq_6000", "miseq")
         flowcell:           Flowcell type key (e.g. "s4", "nano", "high")
         lanes:              Number of lanes used in this run
-        samples:            Number of samples (reserved for future use)
         retain_input:       If True, raw input files are kept post-run
         keep_undetermined:  If True, unmatched reads are written to disk (+8%)
         safety_margin:      Fractional headroom added to total (default 0.20)
@@ -120,12 +118,11 @@ def compute_disk_tb(
         sequencer=sequencer,
         flowcell=flowcell,
         lanes=lanes,
-        samples=samples,
         retain_input=retain_input,
         keep_undetermined=keep_undetermined,
         safety_margin=safety_margin,
     )
-    return round(breakdown.total_tb, 2)
+    return round(breakdown.total_tb, 4)
 
 
 def compute_disk_breakdown(
@@ -133,12 +130,14 @@ def compute_disk_breakdown(
     flowcell: str,
     lanes: int,
     *,
-    samples: int = 96,
     retain_input: bool = False,
     keep_undetermined: bool = False,
     safety_margin: float = 0.20,
 ) -> DiskBreakdown:
     """Compute a full disk breakdown with all components in GB."""
+    if lanes < 1:
+        raise ValueError(f"lanes must be >= 1, got {lanes}")
+
     seq_key = sequencer.lower().replace("-", "_").replace(" ", "_")
     fc_key  = flowcell.lower().replace("-", "_").replace(" ", "_")
 
@@ -159,12 +158,17 @@ def compute_disk_breakdown(
 
     lanes = min(lanes, fc_profile.max_lanes)
 
-    # Apply compression factor to input only — output is always full size
+    # Raw uncompressed sequencer output. FASTQ output size depends on this,
+    # not on the on-disk input format: compression shrinks the stored input
+    # only, while demultiplexed output is always full size.
+    raw_input_gb = fc_profile.gb_per_lane * lanes
+
+    # Apply compression factor to the stored input only.
     compression = _COMPRESSION_FACTOR if fc_profile.compressed else 1.0
-    input_gb = fc_profile.gb_per_lane * lanes * compression
+    input_gb = raw_input_gb * compression
 
     undetermined_factor = _UNDETERMINED_FACTOR if keep_undetermined else 1.0
-    output_gb = input_gb * _OUTPUT_MULTIPLIER * undetermined_factor
+    output_gb = raw_input_gb * _OUTPUT_MULTIPLIER * undetermined_factor
 
     tmp_gb            = input_gb * _TMP_FRACTION
     retained_input_gb = input_gb if retain_input else 0.0

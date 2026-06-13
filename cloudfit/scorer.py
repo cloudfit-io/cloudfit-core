@@ -1,7 +1,7 @@
 """Weighted scoring engine for cloudfit-core."""
 
 from __future__ import annotations
-from .models import WorkloadProfile, MachineType, ScoredInstance, OptimizeFor
+from .models import WorkloadProfile, MachineType, ScoredInstance, OptimizeFor, Archetype
 from .filter import hard_floor_check
 
 WEIGHT_MATRIX: dict[str, dict[str, float]] = {
@@ -22,6 +22,17 @@ _MAX_PRICE_HR = 35.0
 # and structurally rewarded oversize.
 _PERF_IDEAL_RATIO_MAX = 1.5
 _PERF_DECAY_END_RATIO = 3.5
+
+# Per-archetype perf weighting. Each archetype emphasizes the dimensions that
+# dominate its workload. Weights sum to 1.0 so perf_score stays in 0-1.
+# Components: vcpu, ram, ssd (local SSD vs scratch_tb), gpu_vram.
+_ARCHETYPE_PERF_WEIGHTS: dict[Archetype, dict[str, float]] = {
+    Archetype.io:    {"vcpu": 0.3, "ram": 0.3, "ssd": 0.4},
+    Archetype.cpu:   {"vcpu": 0.7, "ram": 0.3},
+    Archetype.mem:   {"vcpu": 0.2, "ram": 0.8},
+    Archetype.gpu:   {"vcpu": 0.1, "ram": 0.1, "gpu_vram": 0.8},
+    Archetype.burst: {"vcpu": 0.5, "ram": 0.5},
+}
 
 # Normalize long-form weight keys to short internal keys.
 # Users may pass "performance" or "availability" (as documented in README);
@@ -91,11 +102,25 @@ def _perf_score(instance: MachineType, profile: WorkloadProfile) -> float:
     Fit is measured against the headroom-adjusted target (declared * (1 + headroom)),
     so when headroom is set the peak band recenters on the buffered size. With the
     default headroom=0 the target equals the declared request.
+
+    The per-component weighting is archetype-specific (see _ARCHETYPE_PERF_WEIGHTS):
+    cpu workloads weight vCPU, mem workloads weight RAM, io workloads weight local
+    SSD against the declared scratch_tb, and gpu workloads weight GPU VRAM. A
+    component with no declared requirement (e.g. no scratch_tb) fits perfectly and
+    does not distort the score.
     """
-    return (
-        0.5 * _fit(instance.vcpu, profile.perf_target_vcpu)
-        + 0.5 * _fit(instance.ram_gb, profile.perf_target_ram_gb)
-    )
+    arch = Archetype(profile.archetype)
+    weights = _ARCHETYPE_PERF_WEIGHTS[arch]
+    fits = {
+        "vcpu": _fit(instance.vcpu, profile.perf_target_vcpu),
+        "ram": _fit(instance.ram_gb, profile.perf_target_ram_gb),
+        "ssd": _fit(instance.local_ssd_tb, profile.disk.scratch_tb or 0.0),
+        "gpu_vram": _fit(
+            float(instance.gpu_vram_gb or 0),
+            float(profile.gpu.vram_gb or 0),
+        ),
+    }
+    return sum(weight * fits[component] for component, weight in weights.items())
 
 
 def _avail_score(instance: MachineType) -> float:

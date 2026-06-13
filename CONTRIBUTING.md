@@ -32,15 +32,16 @@ If you want to build a provider plugin, implement:
 
 ```python
 from cloudfit.providers.base import Provider
-from cloudfit.models import MachineType, Pricing
+from cloudfit.models import MachineType
 
 class MyCloudProvider(Provider):
     def fetch_instances(self, region: str) -> list[MachineType]: ...
-    def get_pricing(self, instance_id: str, region: str) -> Pricing: ...
-    def get_availability(self, instance_id: str, region: str) -> float: ...
+    def get_pricing(self, instance_id: str, region: str) -> float: ...
 ```
 
-Publish as `cloudfit-provider-<name>` on PyPI.
+Set each `MachineType.status` to `active`, `deprecated`, or `tombstoned`; the
+scoring engine reads availability from that field. Publish as
+`cloudfit-provider-<name>` on PyPI.
 
 ## Code of conduct
 

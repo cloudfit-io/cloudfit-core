@@ -100,6 +100,12 @@ def from_dict(data: dict[str, Any]) -> WorkloadProfile:
     Returns:
         A validated WorkloadProfile.
     """
+    if not isinstance(data, dict):
+        raise ValueError(
+            f"Expected a YAML mapping (dict), got {type(data).__name__}. "
+            "Check that the file is not empty and is valid YAML."
+        )
+
     # Support both top-level "workload:" key and flat dict
     w = data.get("workload", data)
     resources = w.get("resources", w)

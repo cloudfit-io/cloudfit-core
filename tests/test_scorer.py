@@ -1,7 +1,8 @@
 """Tests for the cloudfit-core scoring engine."""
 
 import pytest
-from cloudfit import rank, WorkloadProfile, MachineType, OptimizeFor, HeadroomMode
+from pydantic import ValidationError
+from cloudfit import rank, WorkloadProfile, MachineType, OptimizeFor, HeadroomMode, DiskSpec
 
 
 CANDIDATES = [
@@ -226,6 +227,58 @@ def test_headroom_zero_preserves_sub_nominal_ram_floor():
     assert profile.effective_ram_floor_gb == 200.0
     inst = MachineType(id="lean", provider="gcp", vcpu=16, ram_gb=210, price_hr=1.0)
     assert not rank(profile, [inst])[0].disqualified
+
+
+# --- custom weight validation ---
+
+def test_negative_weights_raises():
+    with pytest.raises(ValidationError):
+        WorkloadProfile(vcpu=8, ram_gb=32, weights={"cost": -1, "perf": 1, "avail": 1})
+
+
+def test_non_summing_weights_raises():
+    with pytest.raises(ValidationError):
+        WorkloadProfile(vcpu=8, ram_gb=32, weights={"cost": 5, "perf": 5, "avail": 5})
+
+
+def test_partial_weights_raises():
+    with pytest.raises(ValidationError):
+        WorkloadProfile(vcpu=8, ram_gb=32, weights={"cost": 1.0})
+
+
+def test_valid_custom_weights_score_between_zero_and_one():
+    profile = WorkloadProfile(
+        vcpu=16, ram_gb=64, weights={"cost": 0.5, "performance": 0.4, "availability": 0.1}
+    )
+    for r in rank(profile, CANDIDATES):
+        assert 0.0 <= r.score <= 1.0
+
+
+def test_unknown_field_raises():
+    with pytest.raises(ValidationError):
+        WorkloadProfile(vcpu=8, ram_gb=32, typo_field="x")
+
+
+# --- archetype-aware perf scoring ---
+
+def test_archetype_changes_ranking_io_vs_mem():
+    """Identical vCPU/RAM candidates rank differently under io vs mem archetype.
+
+    Under io, local SSD vs the declared scratch_tb is weighted, so the SSD-equipped
+    instance wins. Under mem, SSD is ignored and the cheaper instance wins.
+    """
+    common = dict(provider="gcp", vcpu=16, ram_gb=64)
+    ssd = MachineType(id="ssd", local_ssd_tb=2.0, price_hr=2.0, **common)
+    no_ssd = MachineType(id="nossd", local_ssd_tb=0.0, price_hr=1.0, **common)
+    disk = DiskSpec(scratch_tb=2.0)
+
+    io = WorkloadProfile(vcpu=16, ram_gb=64, archetype="io",
+                         optimize_for="performance", disk=disk)
+    mem = WorkloadProfile(vcpu=16, ram_gb=64, archetype="mem",
+                          optimize_for="performance", disk=disk)
+
+    assert rank(io, [ssd, no_ssd])[0].instance.id == "ssd"
+    assert rank(mem, [ssd, no_ssd])[0].instance.id == "nossd"
 
 
 def test_readme_headline_example_matches_docs():
