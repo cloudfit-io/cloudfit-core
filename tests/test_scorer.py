@@ -107,18 +107,32 @@ def test_balanced_mode_prefers_exact_fit_over_oversize():
     assert qualified[2].instance.id == "4x"
 
 
-def test_perf_score_max_within_ideal_band():
-    """Instances at 1.0x to 1.5x of requested resources score perf == 1.0."""
+def test_perf_score_peaks_at_exact_fit_and_decays():
+    """Perf peaks at an exact fit and decays for oversize (no flat ideal band).
+
+    Regression for the 1.0x-1.5x plateau, which scored every good fit a flat 1.0
+    and made composite scores tie near 1.0 across the whole top of the ranking.
+    """
     profile = WorkloadProfile(vcpu=16, ram_gb=64, optimize_for=OptimizeFor.performance)
     candidates = [
         MachineType(id="exact",     provider="gcp", vcpu=16, ram_gb=64, price_hr=0.78),
-        MachineType(id="headroom",  provider="gcp", vcpu=24, ram_gb=96, price_hr=1.10),
+        MachineType(id="oversize",  provider="gcp", vcpu=24, ram_gb=96, price_hr=1.10),  # 1.5x
     ]
-    results = rank(profile, candidates)
-    # Both fit inside the ideal band so perf_score == 1.0 for both;
-    # cost breaks the tie in favor of the cheaper exact match.
-    assert results[0].perf_score == 1.0
-    assert results[1].perf_score == 1.0
+    by_id = {r.instance.id: r for r in rank(profile, candidates)}
+    assert by_id["exact"].perf_score == 1.0
+    assert by_id["oversize"].perf_score < 1.0
+    assert by_id["exact"].perf_score > by_id["oversize"].perf_score
+
+
+def test_perf_score_spreads_across_oversize_candidates():
+    """Top picks no longer tie at perf == 1.0: a tighter fit outscores a looser one."""
+    profile = WorkloadProfile(vcpu=40, ram_gb=80, archetype="cpu",
+                              optimize_for=OptimizeFor.performance)
+    tight  = MachineType(id="tight",  provider="gcp", vcpu=44, ram_gb=88,  price_hr=2.0)   # 1.1x
+    looser = MachineType(id="looser", provider="gcp", vcpu=60, ram_gb=120, price_hr=2.0)   # 1.5x
+    by_id = {r.instance.id: r for r in rank(profile, [tight, looser])}
+    assert by_id["tight"].perf_score > by_id["looser"].perf_score
+    assert by_id["tight"].perf_score < 1.0  # not a flat plateau anymore
 
 
 def test_perf_score_zero_for_heavy_oversize():

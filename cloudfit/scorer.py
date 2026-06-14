@@ -16,11 +16,12 @@ WEIGHT_MATRIX: dict[str, dict[str, float]] = {
 # always supplies a candidate-relative range, which is the preferred path.
 _MAX_PRICE_HR = 35.0
 
-# Performance scoring (fit-based): peak at exact match plus a healthy headroom
-# band (1.0x-1.5x, matching common cloud-sizing practice), then linear decay to
-# 0 at well-oversized (3.5x). Replaces the pre-0.3 behavior, which capped at 2x
-# and structurally rewarded oversize.
-_PERF_IDEAL_RATIO_MAX = 1.5
+# Performance scoring (fit-based): peak at an exact fit to the (headroom-adjusted)
+# target, then linear decay to 0 at well-oversized (3.5x). There is no flat
+# "ideal band": the headroom parameter already recenters the target on the
+# buffered size, so an instance sized exactly to the target scores highest and
+# every step of oversize costs score. This lets perf discriminate between
+# candidates instead of flat-lining at 1.0 across a 1.0x-1.5x range.
 _PERF_DECAY_END_RATIO = 3.5
 
 # Per-archetype perf weighting. Each archetype emphasizes the dimensions that
@@ -80,20 +81,19 @@ def _cost_score(instance: MachineType, price_range: tuple[float, float] | None) 
 
 
 def _fit(have: float, want: float) -> float:
-    """Score how well `have` fits `want`. Peak at 1.0x-1.5x, decays beyond.
+    """Score how well `have` fits `want`. Peak at an exact fit (1.0x), decays above.
 
     Under 1.0x returns 0 (under-spec); the hard floor disqualifies these before
-    they reach the scorer in normal flow, but we return 0 defensively.
+    they reach the scorer in normal flow, but we return 0 defensively. From an
+    exact fit the score decays linearly to 0 at _PERF_DECAY_END_RATIO, so a
+    tighter fit always outscores a more oversized one.
     """
     if want <= 0:
         return 1.0
     ratio = have / want
     if ratio < 1.0:
         return 0.0
-    if ratio <= _PERF_IDEAL_RATIO_MAX:
-        return 1.0
-    span = _PERF_DECAY_END_RATIO - _PERF_IDEAL_RATIO_MAX
-    return max(0.0, 1.0 - (ratio - _PERF_IDEAL_RATIO_MAX) / span)
+    return max(0.0, 1.0 - (ratio - 1.0) / (_PERF_DECAY_END_RATIO - 1.0))
 
 
 def _perf_score(instance: MachineType, profile: WorkloadProfile) -> float:
