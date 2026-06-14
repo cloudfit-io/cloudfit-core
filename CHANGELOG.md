@@ -9,6 +9,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - `py.typed` marker so downstream packages (cloudfit-provider-gcp, cloudfit-api) can type-check against cloudfit-core under `mypy --strict`.
 
+### Changed
+- **Minimum Python is now 3.10** (`requires-python = ">=3.10"`). Python 3.9 is dropped from the supported set and the CI matrix. The models use PEP 604 union syntax (`Archetype | str`) in pydantic fields, which is not reliably evaluable on 3.9; 3.10+ removes that risk and aligns cloudfit-core with cloudfit-provider-gcp.
+
 ## [0.6.0] - 2026-06-11
 
 ### Fixed

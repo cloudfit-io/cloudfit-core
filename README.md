@@ -1,7 +1,7 @@
 # cloudfit-core
 
 [![PyPI version](https://img.shields.io/pypi/v/cloudfit-core)](https://pypi.org/project/cloudfit-core/)
-[![Python 3.9+](https://img.shields.io/badge/python-3.9+-blue)](https://pypi.org/project/cloudfit-core/)
+[![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue)](https://pypi.org/project/cloudfit-core/)
 [![License: Apache 2.0](https://img.shields.io/badge/license-Apache%202.0-green)](LICENSE)
 [![Tests](https://github.com/cloudfit-io/cloudfit-core/actions/workflows/ci.yml/badge.svg)](https://github.com/cloudfit-io/cloudfit-core/actions)
 
@@ -31,7 +31,7 @@ cloudfit-core takes a declared workload profile (vCPU, RAM, GPU) and returns ran
 pip install cloudfit-core
 ```
 
-Requires Python 3.9+.
+Requires Python 3.10+.
 
 ---
 
