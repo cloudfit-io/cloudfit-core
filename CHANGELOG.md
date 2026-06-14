@@ -5,6 +5,10 @@ All notable changes to `cloudfit-core` are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.1] - 2026-06-14
+### Added
+- `py.typed` marker so downstream packages (cloudfit-provider-gcp, cloudfit-api) can type-check against cloudfit-core under `mypy --strict`.
+
 ## [0.6.0] - 2026-06-11
 
 ### Fixed
@@ -19,7 +23,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `archetype` and `optimize_for` accept `str` as well as their enum types, matching the documented string-based call style under static type checking.
 
 ### Added
-- `py.typed` marker so downstream packages (cloudfit-provider-gcp, cloudfit-api) can type-check against cloudfit-core under `mypy --strict`.
 - Tests for disk small-run sizing, weight validation, `extra="forbid"`, malformed-YAML handling, and archetype-dependent ranking.
 
 ### Removed
