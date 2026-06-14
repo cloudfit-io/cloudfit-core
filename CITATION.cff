@@ -17,7 +17,7 @@ authors:
     orcid: https://orcid.org/0000-0001-5792-1095
     email: kc.kasaraneni@gmail.com
 version: 0.6.0
-date-released: "2026-06-11"
+date-released: "2026-06-13"
 license: Apache-2.0
 repository-code: https://github.com/cloudfit-io/cloudfit-core
 url: https://github.com/cloudfit-io/cloudfit-core
