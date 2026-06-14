@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+_No unreleased changes._
+
+## [0.7.0] - 2026-06-14
+
 ### Changed
 - **Performance scoring now discriminates between fits instead of plateauing.** `_fit` previously returned a flat `1.0` for any instance between 1.0x and 1.5x of the (headroom-adjusted) target, so well-matched candidates tied at the top and the composite score read ~1.0 for nearly everything. Perf now peaks at an exact fit (1.0x) and decays linearly to 0 at 3.5x, so a tighter fit outscores a more oversized one and the rankings spread out. The `headroom` parameter already recenters the target on the buffered size, so the removed plateau was double-counting headroom. This shifts `rank()` and `score()` perf sub-scores (and therefore composite scores) for over-provisioned candidates; exact-fit and disqualified results are unchanged.
 
