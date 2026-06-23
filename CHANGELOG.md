@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+_No unreleased changes._
+
+## [0.8.0] - 2026-06-23
+
 ### Added
 - **Effective-capacity perf scoring (scoring-depth Layer 1).** `MachineType` gains an optional `perf_factor` (relative per-vCPU performance vs a baseline of `n2` = 1.0). When set, `_perf_score` fits effective capacity (`vcpu * perf_factor`) to the request, so a faster family is no longer equated with a slower one at the same core count. Core ships a documented, overridable `PERF_FACTORS` table and a `perf_factor_for(machine_id)` helper for providers and callers to populate the field. The factors are indicative heuristics (SPECrate/CoreMark per-vCPU basis, read 2026-06-23) pending real run-telemetry calibration.
 - **Cost realism: pricing modes and cost-efficiency (scoring-depth Layer 2).** `MachineType` gains optional `spot_price_hr` and `cud_1yr_price_hr` (both fall back to `price_hr` when unset). `WorkloadProfile` gains `pricing_mode` (`on_demand`/`spot`/`cud_1yr`) with an archetype-aware default exposed as `effective_pricing_mode`: the `burst` archetype defaults to spot (restart-tolerant), everything else to on-demand. Cost is now scored on a cost basis of `price(mode) / perf_factor` (cost per unit of work) rather than raw hourly price, so a faster family is cheaper per unit of work. A `PricingMode` enum is exported.
