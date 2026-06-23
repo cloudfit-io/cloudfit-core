@@ -30,6 +30,12 @@ class HeadroomMode(str, Enum):
     hard = "hard"   # guarantee: also raise the hard floor so sub-buffer instances are disqualified
 
 
+class PricingMode(str, Enum):
+    on_demand = "on_demand"   # standard on-demand price (default for stateful work)
+    spot = "spot"             # preemptible/spot price (default for the burst archetype)
+    cud_1yr = "cud_1yr"       # 1-year committed-use discount price
+
+
 class GPUSpec(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -77,6 +83,14 @@ class WorkloadProfile(BaseModel):
     gpu: GPUSpec = Field(default_factory=GPUSpec)
     scheduling: SchedulingSpec = Field(default_factory=SchedulingSpec)
     optimize_for: OptimizeFor | str = OptimizeFor.balanced
+    pricing_mode: Optional[PricingMode] = Field(
+        default=None,
+        description=(
+            "Which price to score cost on. Unset resolves to spot for the burst "
+            "archetype (restart-tolerant) and on_demand otherwise; see "
+            "effective_pricing_mode."
+        ),
+    )
     providers: list[str] = Field(default_factory=lambda: ["gcp", "aws"])
     region: Optional[str] = Field(
         default=None,
@@ -95,6 +109,20 @@ class WorkloadProfile(BaseModel):
     def _coerce_optimize_for(cls, v: object) -> OptimizeFor:
         """Coerce a string to OptimizeFor, raising on an unknown value."""
         return v if isinstance(v, OptimizeFor) else OptimizeFor(v)
+
+    @property
+    def effective_pricing_mode(self) -> PricingMode:
+        """Resolved pricing mode: explicit override, else archetype-aware default.
+
+        The burst archetype is scatter-gather and restart-tolerant, so it defaults
+        to spot; every other archetype defaults to on-demand. An explicit
+        pricing_mode always wins.
+        """
+        if self.pricing_mode is not None:
+            return self.pricing_mode
+        if Archetype(self.archetype) == Archetype.burst:
+            return PricingMode.spot
+        return PricingMode.on_demand
 
     @property
     def perf_target_vcpu(self) -> float:
@@ -172,12 +200,41 @@ class MachineType(BaseModel):
     vcpu: int
     ram_gb: float
     price_hr: float
+    spot_price_hr: Optional[float] = Field(
+        default=None,
+        gt=0.0,
+        description="Preemptible/spot price per hour. Falls back to price_hr when unset.",
+    )
+    cud_1yr_price_hr: Optional[float] = Field(
+        default=None,
+        gt=0.0,
+        description="1-year committed-use price per hour. Falls back to price_hr when unset.",
+    )
     local_ssd_tb: float = 0.0
     gpu_count: int = 0
     gpu_vram_gb: Optional[int] = None
+    gpu_type: Optional[str] = Field(
+        default=None,
+        description=(
+            "Accelerator model (e.g. 'nvidia-tesla-a100'). When set, the gpu archetype "
+            "scores effective GPU throughput via GPU_CLASS so an A100 outscores a T4 at "
+            "equal VRAM. Unset preserves VRAM-fit scoring."
+        ),
+    )
     region: str = "us-central1"
     status: str = "active"
     generation: Optional[str] = None
+    perf_factor: Optional[float] = Field(
+        default=None,
+        gt=0.0,
+        description=(
+            "Relative per-vCPU performance vs the baseline family (1.0 = baseline). "
+            "When set, perf scoring uses effective capacity (vcpu * perf_factor) so a "
+            "faster family is not equated with a slower one at the same core count. "
+            "Unset (None) preserves count-based scoring. Providers populate this from "
+            "PERF_FACTORS; see cloudfit.scorer.perf_factor_for."
+        ),
+    )
 
 
 class ScoredInstance(BaseModel):
@@ -189,6 +246,8 @@ class ScoredInstance(BaseModel):
     avail_score: float
     disqualified: bool = False
     disqualify_reason: Optional[str] = None
+    contributions: dict[str, float] = Field(default_factory=dict)
+    reason: str = ""
 
     def __lt__(self, other: "ScoredInstance") -> bool:
         return self.score < other.score

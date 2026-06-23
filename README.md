@@ -75,7 +75,7 @@ c7i.24xlarge                    score=0.00  $4.28/hr
 requested 224 GB: it's eliminated by the hard floor filter, not just ranked low
 (see [How scoring works](#how-scoring-works)).
 
-### Region-aware filtering (new in 0.2)
+### Region-aware filtering
 
 Set `region` on the workload profile to restrict candidates to a specific region. The hard floor disqualifies anything not available there, before scoring runs.
 
@@ -126,7 +126,7 @@ profile = WorkloadProfile(
 )
 ```
 
-### Headroom (new in 0.5)
+### Headroom
 
 `headroom` asks for spare capacity above your declared `vcpu` and `ram_gb`, as a fraction. It is the compute sibling of the disk `safety_margin`. The default is `0.0` (no headroom), so existing behavior is unchanged.
 
@@ -293,12 +293,12 @@ resource "google_compute_instance" "worker" {
 
 ## Known limitations
 
-cloudfit-core is at v0.6.0 and ships with documented gaps. Listed here in priority order, with planned mitigations. The math is open and auditable; these are not surprises, they are the next-release backlog.
+cloudfit-core is at v0.8.0 and ships with documented gaps. Listed here in priority order, with planned mitigations. The math is open and auditable; these are not surprises, they are the next-release backlog.
 
 | Limitation | Impact | Planned mitigation |
 |---|---|---|
 | **GCP-only provider.** No AWS, Azure, or other cloud catalogs yet. | Cannot rank AWS/Azure instances | `cloudfit-provider-aws` is the next planned provider (DescribeInstanceTypes + Pricing API) |
-| **No commitments awareness.** CUDs, Savings Plans, and Reserved Instances are not factored. Recommendations are based on on-demand prices. | Inflated effective cost for customers with committed spend | Caller-provided `commitments` payload, computed `effective_price_hr` |
+| **Partial commitments awareness.** Spot and 1-year committed-use prices are scored when a provider supplies them (`spot_price_hr`, `cud_1yr_price_hr`); multi-year CUDs, Savings Plans, Reserved Instances, and account-level committed-spend discounts are not yet factored. | Effective cost can still be overstated for customers with broader committed spend | Caller-provided `commitments` payload that discounts candidates against existing commitments |
 | **No quota / capacity awareness.** A recommendation may be technically valid but unlaunchable in a region with exhausted quota. | "Stuck in queue" failures | Optional `quota_snapshot` payload that hard-floors candidates exceeding remaining quota |
 | **No GPU type discrimination.** Only `gpu_count` and `gpu_vram_gb` are scored. A100 vs H100 vs L4 vs T4 look the same if VRAM matches. | GPU recommendations may miss the right SKU for modern ML | GPU SKU as a scored dimension with TFLOPS and memory-bandwidth lookups |
 | **No CPU generation factor.** A first-gen and third-gen instance with the same vCPU count score identically on perf. | Underweights modern instances that deliver more work per core | Add generation and architecture multipliers to the perf scorer |
@@ -364,7 +364,7 @@ cloudfit-core/
 ├── .gitignore
 │
 ├── cloudfit/
-│   ├── __init__.py         # exports rank, recommend, key models
+│   ├── __init__.py         # exports rank, score_instance, key models
 │   ├── models.py           # WorkloadProfile, MachineType, ScoredInstance (pydantic v2)
 │   ├── scorer.py           # rank(), score_instance(), weight matrix
 │   ├── filter.py           # hard_floor_check(): RAM, vCPU, GPU hard filters

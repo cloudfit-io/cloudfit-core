@@ -7,11 +7,20 @@ from .models import (
     OptimizeFor,
     Archetype,
     HeadroomMode,
+    PricingMode,
     DiskSpec,
     GPUSpec,
     SchedulingSpec,
 )
-from .scorer import rank, score_instance, score
+from .scorer import (
+    rank,
+    score_instance,
+    score,
+    perf_factor_for,
+    PERF_FACTORS,
+    gpu_class_for,
+    GPU_CLASS,
+)
 from .filter import hard_floor_check, apply_floors
 from .disk import compute_disk_tb, compute_disk_breakdown, list_sequencers
 from .yaml_loader import from_yaml, from_dict
@@ -23,9 +32,11 @@ __license__ = "Apache-2.0"
 __all__ = [
     # models
     "WorkloadProfile", "MachineType", "ScoredInstance",
-    "OptimizeFor", "Archetype", "HeadroomMode", "DiskSpec", "GPUSpec", "SchedulingSpec",
+    "OptimizeFor", "Archetype", "HeadroomMode", "PricingMode",
+    "DiskSpec", "GPUSpec", "SchedulingSpec",
     # scorer — both names are public API
     "rank", "score_instance", "score",
+    "perf_factor_for", "PERF_FACTORS", "gpu_class_for", "GPU_CLASS",
     # filter
     "hard_floor_check", "apply_floors",
     # disk
