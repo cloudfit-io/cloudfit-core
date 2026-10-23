@@ -23,8 +23,8 @@ pytest
 
 - Keep PRs focused: one feature or fix per PR
 - Add tests for new scoring logic
-- Run `pytest` and `ruff check .` before submitting
-- Update `CITATION.cff` version if releasing
+- Run `pytest`, `ruff check cloudfit/`, and `mypy --strict cloudfit/` before submitting
+- Add a line under `## [Unreleased]` in `CHANGELOG.md`; `make minor` / `make patch` roll it into the release and bump `pyproject.toml`, `__init__.py`, and `CITATION.cff`
 
 ## Provider plugin interface
 
@@ -40,8 +40,10 @@ class MyCloudProvider(Provider):
 ```
 
 Set each `MachineType.status` to `active`, `deprecated`, or `tombstoned`; the
-scoring engine reads availability from that field. Publish as
-`cloudfit-provider-<name>` on PyPI.
+scoring engine reads availability from that field. Also populate `perf_factor`
+(via `cloudfit.perf_factor_for`, or add the family to `PERF_FACTORS`), `gpu_type`
+for GPU instances, and `spot_price_hr` / `cud_1yr_price_hr` where the cloud
+publishes them. Publish as `cloudfit-provider-<name>` on PyPI.
 
 ## Code of conduct
 

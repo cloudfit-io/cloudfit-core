@@ -7,8 +7,12 @@ abstract: >
   against a workload profile using a configurable weighted scoring function with
   hard floor filters. Five resource archetypes (I/O bound, CPU bound, memory bound,
   GPU, and burst-parallel) set the per-component perf weighting, so the ranking
-  emphasizes the dimension that dominates each workload. It also provides dynamic
-  disk sizing for sequencing demultiplexing runs from experiment parameters.
+  emphasizes the dimension that dominates each workload. Scoring accounts for
+  per-family core speed (effective capacity), on-demand, spot, and committed-use
+  pricing (cost per unit of work), and GPU accelerator throughput, and every
+  result carries per-component contributions and a one-line reason. It also
+  provides dynamic disk sizing for sequencing demultiplexing runs from
+  experiment parameters.
   Designed to be cloud-provider-agnostic via a plugin architecture compatible
   with Terraform and OpenTofu data sources.
 authors:
