@@ -1,7 +1,7 @@
 # cloudfit-core
 
 [![PyPI version](https://img.shields.io/pypi/v/cloudfit-core)](https://pypi.org/project/cloudfit-core/)
-[![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue)](https://pypi.org/project/cloudfit-core/)
+[![Python 3.10 to 3.14](https://img.shields.io/badge/python-3.10%20to%203.14-blue)](https://pypi.org/project/cloudfit-core/)
 [![License: Apache 2.0](https://img.shields.io/badge/license-Apache%202.0-green)](LICENSE)
 [![Tests](https://github.com/cloudfit-io/cloudfit-core/actions/workflows/ci.yml/badge.svg)](https://github.com/cloudfit-io/cloudfit-core/actions)
 
@@ -31,7 +31,7 @@ cloudfit-core takes a declared workload profile (vCPU, RAM, GPU) and returns ran
 pip install cloudfit-core
 ```
 
-Requires Python 3.10+.
+Requires Python 3.10 or newer; CI tests Python 3.10 through 3.14.
 
 ---
 
@@ -410,11 +410,16 @@ Other open-source work:
 ```
 cloudfit-core/
 ├── README.md               # first thing every visitor reads
+├── CHANGELOG.md            # release notes; GitHub Releases are built from it
 ├── CITATION.cff            # GitHub "Cite this repository" button: ORCID linked
 ├── pyproject.toml          # packaging, dependencies, PyPI metadata
 ├── CONTRIBUTING.md         # provider plugin interface guide
+├── Makefile                # version bump, tag, test, lint, build
 ├── LICENSE                 # Apache 2.0
 ├── .gitignore
+├── .github/
+│   ├── dependabot.yml      # monthly GitHub Actions updates
+│   └── workflows/ci.yml    # lint, mypy --strict, tests; PyPI publish and release on tags
 │
 ├── cloudfit/
 │   ├── __init__.py         # exports rank, score_instance, key models
@@ -423,8 +428,8 @@ cloudfit-core/
 │   ├── filter.py           # hard_floor_check(): region, RAM, vCPU, GPU, status
 │   ├── disk.py             # compute_disk_tb(): dynamic disk sizing formula
 │   ├── yaml_loader.py      # from_yaml(): loads workload YAML schema
+│   ├── py.typed            # ships type hints (PEP 561)
 │   └── providers/
-│       ├── __init__.py
 │       └── base.py         # abstract Provider class: plugin contract
 │
 └── tests/
