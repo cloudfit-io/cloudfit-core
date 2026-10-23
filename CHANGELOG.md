@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 _No unreleased changes._
 
+## [0.8.2] - 2026-10-23
+
+### Changed
+- README's known limitations intro no longer names a specific version, so it stays accurate across releases.
+
 ## [0.8.1] - 2026-10-23
 
 ### Added
