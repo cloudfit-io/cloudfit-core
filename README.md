@@ -347,7 +347,7 @@ resource "google_compute_instance" "worker" {
 
 ## Known limitations
 
-cloudfit-core is at v0.8.0 and ships with documented gaps. Listed here in priority order, with planned mitigations. The math is open and auditable; these are not surprises, they are the next-release backlog.
+cloudfit-core ships with documented gaps. Listed here in priority order, with planned mitigations. The math is open and auditable; these are not surprises, they are the next-release backlog.
 
 | Limitation | Impact | Planned mitigation |
 |---|---|---|
