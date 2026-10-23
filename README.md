@@ -182,7 +182,7 @@ c3 costs more per hour here but wins on cost per unit of work.
 
 ### Pricing modes
 
-`pricing_mode` chooses which price the cost score uses: `on_demand`, `spot`, or `cud_1yr` (1-year committed use). Left unset, the `burst` archetype defaults to spot (scatter-gather work is restart-tolerant) and every other archetype to on-demand. When a candidate has no positive price for the chosen mode (`spot_price_hr` / `cud_1yr_price_hr`), its on-demand `price_hr` is used instead, so a partial price set never makes an instance look free.
+`pricing_mode` chooses which price the cost score uses: `on_demand`, `spot`, or `cud_1yr` (1-year committed use). Left unset, a workload that declares `scheduling.spot=True` is scored on spot, as is the `burst` archetype (scatter-gather work is restart-tolerant); everything else defaults to on-demand. An explicit `pricing_mode` always wins. When a candidate has no positive price for the chosen mode (`spot_price_hr` / `cud_1yr_price_hr`), its on-demand `price_hr` is used instead, so a partial price set never makes an instance look free.
 
 ```python
 profile = WorkloadProfile(vcpu=32, ram_gb=128, archetype="cpu", optimize_for="cost",
@@ -273,10 +273,12 @@ workload:
       required: false
 
   scheduling:
-    spot: false
+    spot: false            # true scores on spot prices unless pricing_mode is set
     restart_tolerant: false
 
   optimize_for: balanced   # cost | performance | availability | balanced
+  pricing_mode: on_demand  # on_demand | spot | cud_1yr (optional)
+  region: us-central1      # optional region hard floor
   providers:
     - gcp
     - aws
@@ -356,7 +358,7 @@ cloudfit-core is at v0.8.0 and ships with documented gaps. Listed here in priori
 | **Snapshots are refreshed weekly, not live.** `cloudfit-api` and `cloudfit-ui` bundle an 875-instance, five-region JSON whose on-demand, spot, and committed-use prices are refreshed weekly from the GCP billing catalog via a scheduled pull request. GPU prices are not reconstructed and stay approximate. | Prices can lag by up to a week; GPU cost is approximate | Live registry refreshed hourly, versioned with provenance (`fetched_at`, `source_etag`) |
 | **No empirical validation.** The scoring model is documented and auditable but has not been backtested against historical batch outcomes. | Recommendations are model predictions, not evidence-backed claims | Backtest harness ingesting Nextflow / Cromwell run history to compare cloudfit picks against actual run results |
 
-A complete self-audit covering UX, operations, scoring methodology, and the roadmap will be published alongside the next release. Issues and PRs that surface additional gaps are welcome: see [CONTRIBUTING.md](CONTRIBUTING.md).
+Issues and PRs that surface additional gaps are welcome: see [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ---
 

@@ -86,9 +86,9 @@ class WorkloadProfile(BaseModel):
     pricing_mode: Optional[PricingMode] = Field(
         default=None,
         description=(
-            "Which price to score cost on. Unset resolves to spot for the burst "
-            "archetype (restart-tolerant) and on_demand otherwise; see "
-            "effective_pricing_mode."
+            "Which price to score cost on. Unset resolves to spot when "
+            "scheduling.spot is set or for the burst archetype (restart-tolerant), "
+            "and on_demand otherwise; see effective_pricing_mode."
         ),
     )
     providers: list[str] = Field(default_factory=lambda: ["gcp", "aws"])
@@ -112,15 +112,16 @@ class WorkloadProfile(BaseModel):
 
     @property
     def effective_pricing_mode(self) -> PricingMode:
-        """Resolved pricing mode: explicit override, else archetype-aware default.
+        """Resolved pricing mode: explicit override, else spot-aware default.
 
-        The burst archetype is scatter-gather and restart-tolerant, so it defaults
-        to spot; every other archetype defaults to on-demand. An explicit
-        pricing_mode always wins.
+        An explicit pricing_mode always wins. Otherwise a workload that declares
+        it can run on spot (scheduling.spot) is scored on spot, as is the burst
+        archetype, which is scatter-gather and restart-tolerant; everything else
+        defaults to on-demand.
         """
         if self.pricing_mode is not None:
             return self.pricing_mode
-        if Archetype(self.archetype) == Archetype.burst:
+        if self.scheduling.spot or Archetype(self.archetype) == Archetype.burst:
             return PricingMode.spot
         return PricingMode.on_demand
 

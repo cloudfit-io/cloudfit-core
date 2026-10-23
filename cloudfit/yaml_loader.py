@@ -155,6 +155,8 @@ def from_dict(data: dict[str, Any]) -> WorkloadProfile:
         gpu=gpu,
         scheduling=scheduling,
         optimize_for=OptimizeFor(w.get("optimize_for", "balanced")),
+        pricing_mode=w.get("pricing_mode"),
         providers=w.get("providers", ["gcp", "aws"]),
+        region=w.get("region"),
         weights=w.get("weights"),
     )

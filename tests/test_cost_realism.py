@@ -29,6 +29,17 @@ def test_explicit_pricing_mode_overrides_default():
     assert p.effective_pricing_mode == PricingMode.on_demand
 
 
+def test_scheduling_spot_defaults_to_spot():
+    p = WorkloadProfile(vcpu=8, ram_gb=32, archetype="cpu", scheduling={"spot": True})
+    assert p.effective_pricing_mode == PricingMode.spot
+
+
+def test_explicit_pricing_mode_overrides_scheduling_spot():
+    p = WorkloadProfile(vcpu=8, ram_gb=32, archetype="cpu", scheduling={"spot": True},
+                        pricing_mode=PricingMode.cud_1yr)
+    assert p.effective_pricing_mode == PricingMode.cud_1yr
+
+
 # --- price selection per mode ---
 
 def test_spot_price_used_when_mode_spot():

@@ -7,7 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-_No unreleased changes._
+### Added
+- Python 3.13 and 3.14: tested in CI and declared in the package classifiers.
+
+### Changed
+- `scheduling.spot=True` now scores on spot prices when `pricing_mode` is unset (it previously had no effect on scoring). An explicit `pricing_mode` still wins, and the `burst` archetype still defaults to spot.
+- README covers effective capacity, pricing modes, GPU throughput, and per-pick explanations, marks the Terraform provider as planned, and updates the known limitations; CONTRIBUTING and the CITATION abstract describe the 0.8 scoring fields.
+
+### Fixed
+- `from_yaml` / `from_dict` now read `pricing_mode` and `region`; both were silently ignored, so YAML profiles could not use pricing modes or the region hard floor.
 
 ## [0.8.0] - 2026-06-23
 

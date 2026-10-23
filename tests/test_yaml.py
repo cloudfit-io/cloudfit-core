@@ -4,7 +4,7 @@ import pytest
 import tempfile
 from pathlib import Path
 from cloudfit import from_yaml, from_dict
-from cloudfit.models import OptimizeFor, Archetype
+from cloudfit.models import OptimizeFor, Archetype, PricingMode
 
 
 MINIMAL_YAML = """
@@ -148,6 +148,39 @@ class TestFromDict:
                     "resources": {"vcpu": 4, "ram_gb": 16}
                 }
             })
+
+
+class TestPricingAndRegion:
+    def test_pricing_mode_and_region_load(self):
+        p = _write_tmp("""
+workload:
+  pricing_mode: cud_1yr
+  region: europe-west4
+  resources:
+    vcpu: 16
+    ram_gb: 64
+""")
+        profile = from_yaml(p)
+        assert profile.pricing_mode == PricingMode.cud_1yr
+        assert profile.effective_pricing_mode == PricingMode.cud_1yr
+        assert profile.region == "europe-west4"
+
+    def test_unset_pricing_mode_and_region_default(self):
+        profile = from_dict({"vcpu": 4, "ram_gb": 16})
+        assert profile.pricing_mode is None
+        assert profile.effective_pricing_mode == PricingMode.on_demand
+        assert profile.region is None
+
+    def test_scheduling_spot_scores_on_spot(self):
+        profile = from_dict({"workload": {
+            "scheduling": {"spot": True},
+            "resources": {"vcpu": 4, "ram_gb": 16},
+        }})
+        assert profile.effective_pricing_mode == PricingMode.spot
+
+    def test_invalid_pricing_mode_raises(self):
+        with pytest.raises(Exception):
+            from_dict({"pricing_mode": "reserved", "vcpu": 4, "ram_gb": 16})
 
 
 class TestMalformedYaml:
