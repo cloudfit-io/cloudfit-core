@@ -12,7 +12,7 @@ _No unreleased changes._
 ## [0.9.0] - 2026-10-23
 
 ### Added
-- **AWS EC2 speed factors.** `AWS_PERF_FACTORS` rates EC2 families (Ivy Bridge through Granite Rapids, AMD Naples through Genoa, Graviton1 through Graviton4, burstable `t`-series, and GPU hosts) on the same n2 = 1.0 scale as the GCP table, and is exported. `perf_factor_for` resolves AWS instance types (identified by the `.` in `m7i.2xlarge`) against it, reducing attribute variants to their base family (`m6idn` to `m6i`, `g4dn` to `g4`, `m7i-flex` to `m7i`). Read 2026-10-24; indicative and overridable, like the GCP table.
+- **AWS EC2 speed factors.** `AWS_PERF_FACTORS` rates EC2 families (Ivy Bridge through Granite Rapids, AMD Naples through Genoa, Graviton1 through Graviton4, burstable `t`-series, and GPU hosts) on the same n2 = 1.0 scale as the GCP table, and is exported. `perf_factor_for` resolves AWS instance types (identified by the `.` in `m7i.2xlarge`) against it, reducing attribute variants to their base family (`m6idn` to `m6i`, `g4dn` to `g4`, `m7i-flex` to `m7i`). Read 2026-10-23; indicative and overridable, like the GCP table.
 - **AWS accelerators in `GPU_CLASS`:** H200, L40S, A10G, Radeon Pro V520, M60, and K80; T4G matches the T4 entry.
 
 ### Notes

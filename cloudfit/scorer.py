@@ -99,7 +99,7 @@ PERF_FACTORS: dict[str, float] = {
 #
 # Source basis: same as PERF_FACTORS (vendor SPECrate2017_int per vCPU where
 # published, else CoreMark/Geekbench per-vCPU medians), normalized to GCP n2.
-# Read 2026-10-24. Indicative and overridable, like PERF_FACTORS.
+# Read 2026-10-23. Indicative and overridable, like PERF_FACTORS.
 AWS_PERF_FACTORS: dict[str, float] = {
     # burstable (see note above)
     "t2":    0.60,   # Haswell/Broadwell, CPU credits
@@ -218,7 +218,7 @@ def perf_factor_for(machine_id: str) -> float:
 #
 # Source basis: vendor-published peak dense FP16/BF16 tensor TFLOPS, normalized to
 # H100. Read 2026-06-23; AWS accelerators (h200, l40s, a10g, v520, m60, k80) added
-# 2026-10-24. Indicative, overridable, refreshed as new SKUs land.
+# 2026-10-23. Indicative, overridable, refreshed as new SKUs land.
 #
 # Lookup takes the first key contained in the gpu_type string, so a key that is a
 # substring of another (l4 in l40s) must come after it. Accelerators faster than
