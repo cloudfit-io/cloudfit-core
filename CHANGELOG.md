@@ -9,6 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 _No unreleased changes._
 
+## [0.10.0] - 2026-10-23
+
+### Changed
+- **Cost score is now a ratio to the cheapest qualifying option** (cheapest cost basis divided by the candidate's own) instead of a linear scale between the cheapest and the most expensive. Under the linear scale one very large instance that also met the request set the top of the range: on the AWS catalog a 16 vCPU request qualified $250/hr GPU instances, every sensibly sized option scored ~0.999 on cost, and the ranking fell to exact-size perf fit, so `m6i.4xlarge` beat the cheaper and faster `m7g` and `m8g` even with `optimize_for="cost"`. Now an option twice as expensive per unit of work scores 0.5 whatever else is in the candidate set. The candidate set itself is unchanged, so the cheapest qualifying option still anchors the scale.
+
+### Notes
+- **Rankings change.** Cost differences now count for less in a small, tightly priced candidate set (a 47% dearer option scores 0.68 on cost, not 0.0) and far more in a large one. The README quick-start runners-up move from 0.75 and 0.67 to 0.91 and 0.89; the top pick and its explanation are unchanged.
+
 ## [0.9.1] - 2026-10-23
 
 ### Added

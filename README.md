@@ -66,8 +66,8 @@ for r in results:
 Output:
 ```
 t2d-standard-60                 score=1.00  $2.31/hr
-c2-standard-60                  score=0.75  $3.13/hr
-c3d-standard-60-lssd            score=0.67  $3.39/hr
+c2-standard-60                  score=0.91  $3.13/hr
+c3d-standard-60-lssd            score=0.89  $3.39/hr
 c7i.24xlarge                    score=0.00  $4.28/hr
 ```
 
@@ -121,7 +121,7 @@ The `optimize_for` mode sets the weights:
 
 **Hard floor filters** run before scoring: region (when set), RAM, vCPU, GPU presence, GPU VRAM, and lifecycle status (tombstoned instances are always out). Instances that fail are eliminated entirely, not just ranked low, and carry a plain-language `disqualify_reason`.
 
-**Cost is cost per unit of work, normalized across the candidates**, not against a fixed scale. Each candidate's cost basis is its price in the active [pricing mode](#pricing-modes) divided by its [`perf_factor`](#effective-capacity), so a faster family is cheaper per unit of work even at a higher hourly price. The cheapest qualifying basis scores 1.0 on cost and the most expensive scores 0.0, so a real gap produces a real score gap. An instance with no price (`price_hr <= 0`, e.g. a pricing lookup that failed) scores 0.0 on cost; a missing price is never treated as free.
+**Cost is cost per unit of work, normalized across the candidates**, not against a fixed scale. Each candidate's cost basis is its price in the active [pricing mode](#pricing-modes) divided by its [`perf_factor`](#effective-capacity), so a faster family is cheaper per unit of work even at a higher hourly price. The cheapest qualifying basis scores 1.0 on cost and every other candidate scores the cheapest basis divided by its own, so one costing twice as much per unit of work scores 0.5. Because it is a ratio, one very expensive qualifying instance (say a $250/hr GPU box that also meets a 16 vCPU request) cannot squeeze the sensibly sized options together. An instance with no price (`price_hr <= 0`, e.g. a pricing lookup that failed) scores 0.0 on cost; a missing price is never treated as free.
 
 **Performance is fit to the request**: an exact fit scores highest and oversize decays, per component, weighted by the [archetype](#workload-archetypes). **Availability** is 1.0 for active machine types and 0.4 for deprecated ones.
 

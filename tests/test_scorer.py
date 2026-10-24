@@ -145,11 +145,11 @@ def test_perf_score_zero_for_heavy_oversize():
 
 # --- candidate-relative cost normalization (0.3.x) ---
 
-def test_cost_score_spreads_across_candidate_range():
-    """Cheapest qualifying candidate scores 1.0 on cost, most expensive 0.0.
+def test_cost_score_is_ratio_to_cheapest():
+    """Cheapest qualifying candidate scores 1.0 on cost; others score cheapest / own.
 
     Regression for the fixed-$35 normalizer, which compressed a 35% price gap
-    into a ~0.02 cost-score difference. Cost must now span the full range.
+    into a ~0.02 cost-score difference. A 47% dearer option now scores ~0.68.
     """
     profile = WorkloadProfile(vcpu=16, ram_gb=64, optimize_for=OptimizeFor.cost)
     candidates = [
@@ -159,8 +159,26 @@ def test_cost_score_spreads_across_candidate_range():
     ]
     by_id = {r.instance.id: r for r in rank(profile, candidates)}
     assert by_id["cheap"].cost_score == 1.0
-    assert by_id["dear"].cost_score == 0.0
-    assert 0.0 < by_id["mid"].cost_score < 1.0
+    assert by_id["dear"].cost_score == pytest.approx(2.31 / 3.39, abs=1e-4)
+    assert by_id["dear"].cost_score < by_id["mid"].cost_score < 1.0
+
+
+def test_expensive_outlier_does_not_flatten_cost():
+    """A huge qualifying instance must not squeeze sensibly sized options together.
+
+    Regression: with min-max scaling, a $250/hr box that also meets the request
+    pushed every small option to ~0.999 on cost, so a 50% dearer one tied the
+    cheapest and cost stopped ranking anything (seen on the AWS catalog).
+    """
+    profile = WorkloadProfile(vcpu=16, ram_gb=64, optimize_for=OptimizeFor.cost)
+    candidates = [
+        MachineType(id="cheap", provider="aws", vcpu=16, ram_gb=64, price_hr=1.00),
+        MachineType(id="dearer", provider="aws", vcpu=16, ram_gb=64, price_hr=1.50),
+        MachineType(id="huge", provider="aws", vcpu=192, ram_gb=2048, price_hr=250.0),
+    ]
+    by_id = {r.instance.id: r for r in rank(profile, candidates)}
+    assert by_id["dearer"].cost_score == pytest.approx(1.0 / 1.5, abs=1e-4)
+    assert by_id["cheap"].score - by_id["dearer"].score > 0.2
 
 
 def test_unpriced_instance_is_not_treated_as_free():
@@ -312,7 +330,7 @@ def test_readme_headline_example_matches_docs():
     shown = [(r.instance.id, round(r.score, 2)) for r in rank(profile, candidates)]
     assert shown == [
         ("t2d-standard-60", 1.00),
-        ("c2-standard-60", 0.75),
-        ("c3d-standard-60-lssd", 0.67),
+        ("c2-standard-60", 0.91),
+        ("c3d-standard-60-lssd", 0.89),
         ("c7i.24xlarge", 0.00),
     ]

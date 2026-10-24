@@ -1,5 +1,7 @@
 """Tests for pricing modes and cost-efficiency (scoring-depth Layer 2)."""
 
+import pytest
+
 from cloudfit import (
     MachineType,
     OptimizeFor,
@@ -52,7 +54,7 @@ def test_spot_price_used_when_mode_spot():
     by_id = {r.instance.id: r for r in rank(profile, [spot, on_dem])}
     # spot 0.6 < on-demand 1.0 -> spot instance wins on cost
     assert by_id["n2-standard-8"].cost_score == 1.0
-    assert by_id["n2-standard-8b"].cost_score == 0.0
+    assert by_id["n2-standard-8b"].cost_score == pytest.approx(0.6 / 1.0)
 
 
 def test_spot_falls_back_to_on_demand_when_absent():
@@ -70,7 +72,7 @@ def test_cud_price_used_when_mode_cud():
     flat = MachineType(id="b", provider="gcp", vcpu=8, ram_gb=32, price_hr=1.5)
     by_id = {r.instance.id: r for r in rank(profile, [cud, flat])}
     assert by_id["a"].cost_score == 1.0   # 1.2 committed < 1.5 on-demand
-    assert by_id["b"].cost_score == 0.0
+    assert by_id["b"].cost_score == pytest.approx(1.2 / 1.5)
 
 
 def test_spot_reason_flags_interruptible():
@@ -114,4 +116,4 @@ def test_pricing_default_is_a_noop_vs_raw_price():
     ]
     by_id = {r.instance.id: r for r in rank(profile, candidates)}
     assert by_id["cheap"].cost_score == 1.0
-    assert by_id["dear"].cost_score == 0.0
+    assert by_id["dear"].cost_score == pytest.approx(2.31 / 3.39, abs=1e-4)

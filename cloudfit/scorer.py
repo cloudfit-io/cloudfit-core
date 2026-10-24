@@ -361,10 +361,13 @@ def _cost_score(
     basis_range: tuple[float, float] | None,
     mode: PricingMode,
 ) -> float:
-    """Cost score in 0-1. Lowest cost basis scores 1.0, highest 0.0.
+    """Cost score in 0-1: the cheapest qualified cost basis divided by this one.
 
-    Candidate-relative normalization spreads the qualified set across the full
-    range, so a real cost gap moves the score. An unpriced instance scores 0.0: a
+    The cheapest qualified option scores 1.0 and one costing twice as much per unit
+    of work scores 0.5, however expensive the priciest candidate is. (A linear
+    min-max scale let one very large qualifying instance, e.g. a $250/hr GPU box
+    that also meets a 16 vCPU request, squeeze every sensibly sized option to
+    ~0.999, so cost stopped ranking anything.) An unpriced instance scores 0.0: a
     missing price is never treated as free. When no range is available (standalone
     scoring), fall back to a fixed reference.
     """
@@ -373,10 +376,8 @@ def _cost_score(
         return 0.0
     if basis_range is None:
         return max(0.0, 1.0 - (basis / _MAX_PRICE_HR))
-    floor, ceiling = basis_range
-    if ceiling <= floor:
-        return 1.0
-    return max(0.0, min(1.0, (ceiling - basis) / (ceiling - floor)))
+    floor = basis_range[0]
+    return min(1.0, floor / basis)
 
 
 def _fit(have: float, want: float) -> float:
@@ -557,9 +558,9 @@ def rank(
     Qualified instances are returned first, sorted by score descending.
     Disqualified instances appear at the end (score=0.0).
 
-    Cost is normalized across the qualified, priced candidates so the cheapest
-    qualifying option scores 1.0 and the most expensive 0.0. The cost basis uses
-    the profile's effective pricing mode (spot/on-demand/committed-use).
+    Cost is scored relative to the cheapest qualified, priced candidate, which
+    scores 1.0; the rest score cheapest / own cost basis. The cost basis uses the
+    profile's effective pricing mode (spot/on-demand/committed-use).
     """
     mode = profile.effective_pricing_mode
     qualified_priced = [
