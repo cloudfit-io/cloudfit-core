@@ -9,6 +9,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 _No unreleased changes._
 
+## [0.11.1] - 2026-10-24
+
+### Fixed
+- `cpu_arch_for` returned None (architecture unknown) for AWS high-memory types without a generation digit (`u-6tb1.112xlarge`); they are x86_64. It now classifies all 1,410 us-east-1 instance types in agreement with AWS's processor data.
+
+### Changed
+- Tests: property-based invariants for `rank()` (Hypothesis: scores bounded and explained, ordering, floor consistency, a cheaper twin never scores lower) and a golden ranking test over a frozen 193-instance GCP and AWS catalog, so any scoring change shows up as a reviewed diff. `hypothesis` is a dev dependency.
+- CI enforces at least 90% test coverage and runs `pip-audit` on the dependency tree; Dependabot also proposes monthly Python dependency updates.
+
 ## [0.11.0] - 2026-10-24
 
 ### Added

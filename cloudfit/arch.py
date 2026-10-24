@@ -17,10 +17,11 @@ from .models import CpuArch
 _GCP_ARM_FAMILIES = frozenset({"t2a", "c4a", "n4a", "a4x"})
 
 # AWS instance families: class letters, generation digits, attribute letters.
+# The digits are optional for the high-memory "u" family (u-6tb1.112xlarge).
 # Graviton families carry a "g" among the attribute letters after the
 # generation (m6g, c7gn, x2gd, im4gn, is4gen, g5g, t4g); the class letter "g"
 # before the digits (g4dn, g6e) is the GPU class, not Graviton.
-_AWS_FAMILY = re.compile(r"^([a-z]+)(\d+)([a-z]*)$")
+_AWS_FAMILY = re.compile(r"^([a-z]+)(\d*)([a-z]*)$")
 _AWS_GRAVITON1 = "a1"
 
 

@@ -21,6 +21,7 @@ from cloudfit import CpuArch, MachineType, WorkloadProfile, cpu_arch_for, from_d
     ("g6e.12xlarge", CpuArch.x86_64),
     ("m7i-flex.large", CpuArch.x86_64),
     ("u7in-16tb.224xlarge", CpuArch.x86_64),
+    ("u-6tb1.112xlarge", CpuArch.x86_64),  # high memory, no generation digit
     ("mac1.metal", CpuArch.x86_64),
     ("t2a-standard-4", CpuArch.arm64),   # GCP Ampere Altra
     ("c4a-standard-8", CpuArch.arm64),   # GCP Axion

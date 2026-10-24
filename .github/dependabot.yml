@@ -8,3 +8,11 @@ updates:
     groups:
       actions:
         patterns: ["*"]
+  # Python dependencies: one grouped PR a month, so CI (tests, pip-audit) vets each bump.
+  - package-ecosystem: pip
+    directory: /
+    schedule:
+      interval: monthly
+    groups:
+      python:
+        patterns: ["*"]

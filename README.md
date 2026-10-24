@@ -468,6 +468,8 @@ cloudfit-core/
     ├── test_cost_realism.py  # pricing modes, cost per unit of work
     ├── test_gpu_class.py     # GPU throughput and GPU_CLASS lookups
     ├── test_cpu_arch.py      # cpu_arch hard floor and cpu_arch_for lookups
+    ├── test_properties.py    # property-based invariants of rank() (Hypothesis)
+    ├── test_golden_ranking.py  # top picks over a frozen catalog; regenerate on purpose
     ├── test_disk.py          # disk formula, CBCL vs BCL factor, sequencer profiles
     └── test_yaml.py          # from_yaml() loads profiles correctly
 ```
