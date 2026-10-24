@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 _No unreleased changes._
 
+## [0.10.2] - 2026-10-23
+
+### Changed
+- README: AWS is a live provider ([cloudfit-provider-aws](https://github.com/cloudfit-io/cloudfit-provider-aws)). The scope note, provider plugin install lines, related projects, and known limitations (now "GCP and AWS only", noting AWS has no public spot prices, plus both bundled snapshots) say so.
+
 ## [0.10.1] - 2026-10-23
 
 ### Fixed

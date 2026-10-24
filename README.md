@@ -21,7 +21,7 @@ The free, on-by-default right-sizing tools (GCP Recommender, AWS Compute Optimiz
 
 cloudfit-core takes a declared workload profile (vCPU, RAM, GPU) and returns ranked, explainable instance recommendations, with no running instance and no telemetry required.
 
-> **Scope today:** the scoring engine is provider-agnostic (it ranks whatever candidates you give it), but the only live provider catalog shipped is GCP, via [`cloudfit-provider-gcp`](https://github.com/cloudfit-io/cloudfit-provider-gcp). AWS is planned, not yet released.
+> **Scope today:** the scoring engine is provider-agnostic (it ranks whatever candidates you give it), and two live provider catalogs ship today: GCP via [`cloudfit-provider-gcp`](https://github.com/cloudfit-io/cloudfit-provider-gcp) and AWS via [`cloudfit-provider-aws`](https://github.com/cloudfit-io/cloudfit-provider-aws). Azure is not covered yet.
 
 ---
 
@@ -301,7 +301,7 @@ results = rank(profile, candidates)
 
 ```bash
 pip install cloudfit-provider-gcp   # GCP Compute Engine machine types and pricing
-# cloudfit-provider-aws (AWS EC2) is planned, not yet released
+pip install cloudfit-provider-aws   # AWS EC2 instance types and pricing (public price list, no credentials)
 ```
 
 Each provider implements a simple interface:
@@ -351,11 +351,11 @@ cloudfit-core ships with documented gaps. Listed here in priority order, with pl
 
 | Limitation | Impact | Planned mitigation |
 |---|---|---|
-| **GCP-only provider.** No AWS, Azure, or other cloud catalogs yet. | Cannot rank AWS/Azure instances | `cloudfit-provider-aws` is the next planned provider (DescribeInstanceTypes + Pricing API) |
+| **GCP and AWS only.** No Azure or other cloud catalogs yet, and AWS spot prices are not in AWS's public price list, so AWS instances in `spot` mode are priced on-demand. | Cannot rank Azure instances; AWS spot comparisons understate AWS savings | An Azure provider; AWS spot prices from the credentialed spot price history API |
 | **Partial commitments awareness.** Spot and 1-year committed-use prices are scored when a provider supplies them (`spot_price_hr`, `cud_1yr_price_hr`); multi-year CUDs, Savings Plans, Reserved Instances, and account-level committed-spend discounts are not yet factored. | Effective cost can still be overstated for customers with broader committed spend | Caller-provided `commitments` payload that discounts candidates against existing commitments |
 | **No quota / capacity awareness.** A recommendation may be technically valid but unlaunchable in a region with exhausted quota. | "Stuck in queue" failures | Optional `quota_snapshot` payload that hard-floors candidates exceeding remaining quota |
 | **Heuristic speed and GPU tables.** `PERF_FACTORS` and `GPU_CLASS` are documented, dated estimates (GCP and AWS families and common accelerators), not benchmarks of your workload. AWS burstable `t`-series factors are deliberately conservative because sustained use beyond the CPU-credit baseline is throttled or billed extra. Unknown families and accelerators fall back to the baseline / VRAM fit. | Relative speed can be off for a given tool | Workload-specific factors calibrated from run history (see backtesting below) |
-| **Snapshots are refreshed weekly, not live.** `cloudfit-api` and `cloudfit-ui` bundle an 875-instance, five-region JSON whose on-demand, spot, and committed-use prices are refreshed weekly from the GCP billing catalog via a scheduled pull request. GPU prices are not reconstructed and stay approximate. | Prices can lag by up to a week; GPU cost is approximate | Live registry refreshed hourly, versioned with provenance (`fetched_at`, `source_etag`) |
+| **Snapshots are refreshed weekly, not live.** `cloudfit-api` and `cloudfit-ui` bundle an 875-instance GCP snapshot (on-demand, spot, and committed-use prices refreshed weekly from the GCP billing catalog; GPU prices are not reconstructed and stay approximate) and an about 6,000-instance AWS snapshot (rebuilt weekly from AWS's public price list), five regions each, via scheduled pull requests. | Prices can lag by up to a week; GCP GPU cost is approximate | Live registry refreshed hourly, versioned with provenance (`fetched_at`, `source_etag`) |
 | **No empirical validation.** The scoring model is documented and auditable but has not been backtested against historical batch outcomes. | Recommendations are model predictions, not evidence-backed claims | Backtest harness ingesting Nextflow / Cromwell run history to compare cloudfit picks against actual run results |
 
 Issues and PRs that surface additional gaps are welcome: see [CONTRIBUTING.md](CONTRIBUTING.md).
@@ -394,7 +394,7 @@ GitHub also shows a **Cite this repository** button in the sidebar (powered by `
 In the cloudfit ecosystem:
 
 - [`cloudfit-provider-gcp`](https://github.com/cloudfit-io/cloudfit-provider-gcp): GCP Compute Engine machine-type fetcher (live PyPI)
-- [`cloudfit-provider-aws`](https://github.com/cloudfit-io/cloudfit-provider-aws): AWS EC2 fetcher (planning phase, accepting feedback)
+- [`cloudfit-provider-aws`](https://github.com/cloudfit-io/cloudfit-provider-aws): AWS EC2 fetcher from the public price list (live PyPI)
 - [`cloudfit-api`](https://github.com/cloudfit-io/cloudfit-api): Stateless FastAPI service over cloudfit-core ([live demo](https://chaitanyakasaraneni-cloudfit-api.hf.space/docs))
 - [`cloudfit-ui`](https://github.com/cloudfit-io/cloudfit-ui): One-click Gradio demo over cloudfit-core ([live demo](https://chaitanyakasaraneni-cloudfit-ui.hf.space))
 
