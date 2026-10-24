@@ -28,7 +28,7 @@ from .arch import cpu_arch_for
 from .disk import compute_disk_tb, compute_disk_breakdown, list_sequencers
 from .yaml_loader import from_yaml, from_dict
 
-__version__ = "0.11.1"
+__version__ = "0.11.2"
 __author__ = "Chaitanya Krishna Kasaraneni"
 __license__ = "Apache-2.0"
 

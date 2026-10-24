@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+_No unreleased changes._
+
+## [0.11.2] - 2026-10-24
+
 ### Fixed
 - CI upgrades setuptools before the dependency audit (older runner images preinstall a version with known CVEs), and Dependabot leaves the deliberately pinned `ruff` alone. 0.11.1 was tagged but never published, because that audit failed on the runner's setuptools; 0.11.2 ships the same changes.
 
