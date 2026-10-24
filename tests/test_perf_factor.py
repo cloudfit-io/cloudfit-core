@@ -156,6 +156,13 @@ def test_reason_is_present_for_qualified():
     assert "faster" in s.reason  # c3 perf_factor > 1.0
 
 
+def test_reason_names_aws_family_without_size():
+    profile = WorkloadProfile(vcpu=32, ram_gb=64, optimize_for=OptimizeFor.performance)
+    inst = MachineType(id="c8g.8xlarge", provider="aws", vcpu=32, ram_gb=64,
+                       price_hr=1.27, perf_factor=perf_factor_for("c8g.8xlarge"))
+    assert "; c8g cores ~35% faster" in score_instance(inst, profile).reason
+
+
 def test_reason_flags_slower_family():
     profile = WorkloadProfile(vcpu=16, ram_gb=64, optimize_for=OptimizeFor.cost)
     inst = MachineType(id="e2-standard-16", provider="gcp", vcpu=16, ram_gb=64,

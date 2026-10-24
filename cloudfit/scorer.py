@@ -476,8 +476,9 @@ def _reason(
     if factor is not None and abs(factor - 1.0) >= 0.01:
         pct = round(abs(factor - 1.0) * 100)
         direction = "faster" if factor > 1.0 else "slower"
-        family = instance.id.split("-")[0].lower()
-        line += f"; {family} cores ~{pct}% {direction} than baseline"
+        # AWS types name the family before the "." (c8g.8xlarge); GCP before the "-".
+        family = instance.id.split(".")[0] if "." in instance.id else instance.id.split("-")[0]
+        line += f"; {family.lower()} cores ~{pct}% {direction} than baseline"
 
     if mode == PricingMode.spot and instance.spot_price_hr and instance.spot_price_hr > 0:
         line += "; priced on spot (interruptible)"

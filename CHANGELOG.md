@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 _No unreleased changes._
 
+## [0.10.1] - 2026-10-23
+
+### Fixed
+- A result's `reason` named an AWS instance's whole id as its family ("c8g.8xlarge cores ~35% faster"); it now names the family ("c8g cores"), as it already did for GCP.
+
 ## [0.10.0] - 2026-10-23
 
 ### Changed
