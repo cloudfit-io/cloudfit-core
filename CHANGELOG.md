@@ -9,6 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 _No unreleased changes._
 
+## [0.9.1] - 2026-10-23
+
+### Added
+- `AWS_PERF_FACTORS` entries for families in the current EC2 catalog that 0.9.0 missed: AMD Turin (`m8a`, `c8a`, `r8a`), `i7i`, `i8g`, `x8i`, `t8i`, high-memory `u` and `u7i`, the `p6` B200/B300 host, `gr6`, `g3s`, and the oldest previous generations (`m1`, `m2`, `c1`, `t1`, `cc2`, `cr1`, `hs1`, `g2`, `i2`, `d2`, `h1`), which had defaulted to the 1.0 baseline and so outscored newer hardware.
+
+### Changed
+- `perf_factor_for` rates an AWS family newer than the table (e.g. Graviton5 `m9g`) like the newest listed generation of the same class and processor line (`m8g`) instead of the 1.0 baseline, and resolves any dashed name (`u-6tb1`, `u7in-16tb`, `p6-b200`) by the part before the dash, as it already did for `-flex`.
+
 ## [0.9.0] - 2026-10-23
 
 ### Added

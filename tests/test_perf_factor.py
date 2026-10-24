@@ -49,6 +49,9 @@ def test_perf_factor_for_aws_base_family():
     ("p4de.24xlarge", "p4"),
     ("g6e.12xlarge", "g6"),
     ("m7i-flex.large", "m7i"),
+    ("u-6tb1.112xlarge", "u"),
+    ("u7in-16tb.224xlarge", "u7i"),
+    ("p6-b200.48xlarge", "p6"),
 ])
 def test_perf_factor_for_aws_attribute_suffixes(instance_type, family):
     assert perf_factor_for(instance_type) == AWS_PERF_FACTORS[family]
@@ -67,9 +70,20 @@ def test_perf_factor_for_aws_and_gcp_names_do_not_collide():
     assert perf_factor_for("c3.large") < perf_factor_for("c3-standard-4")
 
 
+@pytest.mark.parametrize("instance_type, family", [
+    ("m9g.xlarge", "m8g"),      # Graviton5 rated at least as fast as Graviton4
+    ("c9gd.large", "c8g"),
+    ("i7ie.large", "i7i"),
+    ("m8azn.large", "m8a"),
+    ("g7e.2xlarge", "g6"),
+])
+def test_perf_factor_for_aws_newer_generation_falls_back(instance_type, family):
+    assert perf_factor_for(instance_type) == AWS_PERF_FACTORS[family]
+
+
 def test_perf_factor_for_aws_unknown_family_defaults_to_one():
     assert perf_factor_for("inf2.xlarge") == 1.0
-    assert perf_factor_for("u-6tb1.112xlarge") == 1.0
+    assert perf_factor_for("mac2.metal") == 1.0
 
 
 def test_aws_newer_generation_outranks_older_at_equal_cores_and_price():
