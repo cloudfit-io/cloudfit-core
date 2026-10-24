@@ -1,0 +1,47 @@
+name: Used in research
+description: Tell us about a paper, preprint, thesis, or public research workflow that uses cloudfit, so it can be listed in the README.
+title: "[Used in research] "
+labels: ["used-in-research"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for letting us know. Each entry is listed under "Used in research" in the README, which helps other researchers find cloudfit and helps the project show its research use.
+
+  - type: dropdown
+    id: kind
+    attributes:
+      label: What kind of work is it?
+      options:
+        - Published paper
+        - Preprint
+        - Thesis or dissertation
+        - Public pipeline or workflow
+        - Other
+    validations:
+      required: true
+
+  - type: input
+    id: link
+    attributes:
+      label: Link or DOI
+      placeholder: "https://doi.org/... or a repository URL"
+    validations:
+      required: true
+
+  - type: textarea
+    id: usage
+    attributes:
+      label: How was cloudfit used?
+      description: One or two sentences, e.g. which pipeline steps it sized, which clouds, and what it informed.
+      placeholder: "Sized the alignment and variant-calling steps of our WGS pipeline on GCP before a cohort run."
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: consent
+    attributes:
+      label: Listing
+      options:
+        - label: The work is public (or I have permission to share it), and it may be listed in the cloudfit README.
+          required: true

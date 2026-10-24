@@ -378,7 +378,17 @@ If you use cloudfit-core in your research, please cite it:
 }
 ```
 
-GitHub also shows a **Cite this repository** button in the sidebar (powered by `CITATION.cff`).
+GitHub also shows a **Cite this repository** button in the sidebar (powered by `CITATION.cff`). Please include the version you used (`python -c "import cloudfit; print(cloudfit.__version__)"`), since scoring changes between releases; each release's changes are in the [CHANGELOG](CHANGELOG.md).
+
+---
+
+## Used in research
+
+Papers, preprints, theses, and public research workflows that use cloudfit are listed here.
+
+_No entries yet._
+
+Using cloudfit in your research? [Open a "Used in research" issue](https://github.com/cloudfit-io/cloudfit-core/issues/new?template=used-in-research.yml) with a link and a sentence on how you used it, and it will be added. Early users are especially welcome: tell us what worked and what did not.
 
 ---
 

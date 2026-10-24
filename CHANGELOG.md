@@ -7,7 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-_No unreleased changes._
+### Added
+- README "Used in research" section and a matching issue form (`.github/ISSUE_TEMPLATE/used-in-research.yml`) for reporting papers, preprints, theses, and public workflows that use cloudfit.
+
+### Changed
+- README citation section asks citers to include the cloudfit version they used.
 
 ## [0.10.2] - 2026-10-23
 
