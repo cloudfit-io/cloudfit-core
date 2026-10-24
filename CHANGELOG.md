@@ -9,6 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 _No unreleased changes._
 
+## [0.9.0] - 2026-10-23
+
+### Added
+- **AWS EC2 speed factors.** `AWS_PERF_FACTORS` rates EC2 families (Ivy Bridge through Granite Rapids, AMD Naples through Genoa, Graviton1 through Graviton4, burstable `t`-series, and GPU hosts) on the same n2 = 1.0 scale as the GCP table, and is exported. `perf_factor_for` resolves AWS instance types (identified by the `.` in `m7i.2xlarge`) against it, reducing attribute variants to their base family (`m6idn` to `m6i`, `g4dn` to `g4`, `m7i-flex` to `m7i`). Read 2026-10-24; indicative and overridable, like the GCP table.
+- **AWS accelerators in `GPU_CLASS`:** H200, L40S, A10G, Radeon Pro V520, M60, and K80; T4G matches the T4 entry.
+
+### Notes
+- **GCP scoring is unchanged.** GCP ids still resolve against `PERF_FACTORS`, and none of the new GPU names match a GCP accelerator string. AWS and GCP tables are separate because the clouds reuse family names for different hardware (AWS `c3` is 2013 Ivy Bridge; GCP `c3` is Sapphire Rapids).
+- **Accelerators faster than the H100 (e.g. B200) are not listed yet.** `GPU_CLASS` normalizes full credit to its largest entry, so adding one would shift every existing GPU score; that needs its own release.
+
 ## [0.8.3] - 2026-10-23
 
 ### Changed

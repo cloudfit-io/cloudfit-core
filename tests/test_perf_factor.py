@@ -3,6 +3,7 @@
 import pytest
 
 from cloudfit import (
+    AWS_PERF_FACTORS,
     MachineType,
     OptimizeFor,
     PERF_FACTORS,
@@ -27,6 +28,57 @@ def test_perf_factor_for_baseline_is_one():
 def test_perf_factor_for_unknown_family_defaults_to_one():
     assert perf_factor_for("totally-made-up") == 1.0
     assert perf_factor_for("singletoken") == 1.0
+
+
+# --- AWS instance types ---
+
+def test_perf_factor_for_aws_base_family():
+    assert perf_factor_for("m7i.2xlarge") == AWS_PERF_FACTORS["m7i"]
+    assert perf_factor_for("c7g.16xlarge") == AWS_PERF_FACTORS["c7g"]
+    assert perf_factor_for("t3.micro") == AWS_PERF_FACTORS["t3"]
+
+
+@pytest.mark.parametrize("instance_type, family", [
+    ("m6idn.xlarge", "m6i"),    # d + n stripped, processor letter kept
+    ("m5dn.large", "m5"),
+    ("c6gn.medium", "c6g"),
+    ("r5b.4xlarge", "r5"),
+    ("x2iedn.metal", "x2i"),
+    ("i3en.6xlarge", "i3"),
+    ("g4dn.xlarge", "g4"),
+    ("p4de.24xlarge", "p4"),
+    ("g6e.12xlarge", "g6"),
+    ("m7i-flex.large", "m7i"),
+])
+def test_perf_factor_for_aws_attribute_suffixes(instance_type, family):
+    assert perf_factor_for(instance_type) == AWS_PERF_FACTORS[family]
+
+
+def test_perf_factor_for_aws_exact_entry_beats_suffix_stripping():
+    """m5zn is a 4.5 GHz part, not an m5 with attributes."""
+    assert perf_factor_for("m5zn.6xlarge") == AWS_PERF_FACTORS["m5zn"]
+    assert AWS_PERF_FACTORS["m5zn"] > AWS_PERF_FACTORS["m5"]
+
+
+def test_perf_factor_for_aws_and_gcp_names_do_not_collide():
+    """AWS c3 is 2013 Ivy Bridge; GCP c3 is Sapphire Rapids."""
+    assert perf_factor_for("c3.large") == AWS_PERF_FACTORS["c3"]
+    assert perf_factor_for("c3-standard-4") == PERF_FACTORS["c3"]
+    assert perf_factor_for("c3.large") < perf_factor_for("c3-standard-4")
+
+
+def test_perf_factor_for_aws_unknown_family_defaults_to_one():
+    assert perf_factor_for("inf2.xlarge") == 1.0
+    assert perf_factor_for("u-6tb1.112xlarge") == 1.0
+
+
+def test_aws_newer_generation_outranks_older_at_equal_cores_and_price():
+    profile = WorkloadProfile(vcpu=32, ram_gb=128, archetype="cpu",
+                              optimize_for=OptimizeFor.balanced)
+    common = dict(provider="aws", vcpu=32, ram_gb=128, price_hr=1.6)
+    old = MachineType(id="m5.8xlarge", perf_factor=perf_factor_for("m5.8xlarge"), **common)
+    new = MachineType(id="m7i.8xlarge", perf_factor=perf_factor_for("m7i.8xlarge"), **common)
+    assert rank(profile, [old, new])[0].instance.id == "m7i.8xlarge"
 
 
 # --- effective capacity ---

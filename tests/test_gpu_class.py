@@ -26,6 +26,24 @@ def test_gpu_class_for_matches_token_in_name():
     assert gpu_class_for("nvidia-h100-80gb") == GPU_CLASS["h100"]
 
 
+def test_gpu_class_for_aws_accelerators():
+    assert gpu_class_for("nvidia-h200") == GPU_CLASS["h200"]
+    assert gpu_class_for("nvidia-a10g") == GPU_CLASS["a10g"]
+    assert gpu_class_for("nvidia-t4g") == GPU_CLASS["t4"]
+    assert gpu_class_for("amd-radeon-pro-v520") == GPU_CLASS["v520"]
+
+
+def test_gpu_class_for_l40s_is_not_read_as_l4():
+    assert gpu_class_for("nvidia-l40s") == GPU_CLASS["l40s"]
+    assert gpu_class_for("nvidia-l4") == GPU_CLASS["l4"]
+    assert GPU_CLASS["l40s"] > GPU_CLASS["l4"]
+
+
+def test_gpu_class_reference_is_h100():
+    """New entries must not raise the full-credit reference and shift existing scores."""
+    assert max(GPU_CLASS.values()) == GPU_CLASS["h100"] == 1.0
+
+
 def test_gpu_class_for_unknown_returns_none():
     assert gpu_class_for("nvidia-future-9000") is None
 

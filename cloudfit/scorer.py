@@ -86,17 +86,127 @@ PERF_FACTORS: dict[str, float] = {
     "h3":   1.25,   # Sapphire Rapids, HPC
 }
 
+# AWS EC2 families on the same n2 = 1.00 scale. Kept separate from PERF_FACTORS
+# because AWS and GCP reuse family names for different hardware (AWS c3/c4/m3 are
+# 2013-2015 Intel parts; GCP c3/c4 are current generation).
+#
+# Keys are the base family; attribute suffixes (d = local NVMe, n = network,
+# e = extra memory/storage, b = EBS, z = high frequency, -flex) resolve to it via
+# _aws_family, so m6idn and m6i share a factor. Graviton and AMD 7th-gen-and-later
+# families run one physical core per vCPU (no SMT), hence their higher per-vCPU
+# factors. Burstable t-series factors are conservative: sustained use beyond the
+# CPU-credit baseline is throttled or billed extra.
+#
+# Source basis: same as PERF_FACTORS (vendor SPECrate2017_int per vCPU where
+# published, else CoreMark/Geekbench per-vCPU medians), normalized to GCP n2.
+# Read 2026-10-24. Indicative and overridable, like PERF_FACTORS.
+AWS_PERF_FACTORS: dict[str, float] = {
+    # burstable (see note above)
+    "t2":    0.60,   # Haswell/Broadwell, CPU credits
+    "t3a":   0.65,   # AMD Naples/Rome, CPU credits
+    "t3":    0.70,   # Skylake/Cascade Lake, CPU credits
+    "t4g":   0.70,   # Graviton2, CPU credits
+    # previous generations
+    "m3":    0.70,   # Ivy Bridge
+    "r3":    0.70,   # Ivy Bridge
+    "c3":    0.75,   # Ivy Bridge, higher clock
+    "x1":    0.75,   # Haswell, memory-optimized
+    "m4":    0.80,   # Broadwell/Haswell
+    "r4":    0.80,   # Broadwell
+    "i3":    0.80,   # Broadwell, storage-optimized
+    "c4":    0.85,   # Haswell, higher clock
+    "p2":    0.80,   # K80 host, Broadwell
+    "g3":    0.80,   # M60 host, Broadwell
+    "p3":    0.85,   # V100 host, Broadwell
+    # Intel
+    "m5":    0.95,   # Skylake/Cascade Lake
+    "r5":    0.95,   # Skylake/Cascade Lake
+    "d3":    0.95,   # Cascade Lake, dense storage
+    "g4":    0.95,   # T4 host (g4dn), Cascade Lake
+    "c5":    1.00,   # Skylake/Cascade Lake, 3.4-3.6 GHz
+    "p4":    1.00,   # A100 host (p4d), Cascade Lake
+    "m6i":   1.00,   # Ice Lake
+    "r6i":   1.00,   # Ice Lake
+    "i4i":   1.00,   # Ice Lake, storage-optimized
+    "x2i":   1.00,   # Ice Lake, memory-optimized
+    "c6i":   1.05,   # Ice Lake, 3.5 GHz
+    "z1":    1.10,   # Skylake, 4.0 GHz sustained
+    "m5zn":  1.15,   # Cascade Lake, 4.5 GHz
+    "m7i":   1.20,   # Sapphire Rapids
+    "c7i":   1.20,   # Sapphire Rapids
+    "r7i":   1.20,   # Sapphire Rapids
+    "m8i":   1.30,   # Granite Rapids
+    "c8i":   1.30,   # Granite Rapids
+    "r8i":   1.30,   # Granite Rapids
+    # AMD
+    "m5a":   0.80,   # Naples/Rome
+    "r5a":   0.80,   # Naples/Rome
+    "c5a":   0.85,   # Rome, 3.3 GHz
+    "g4a":   0.85,   # Radeon V520 host (g4ad), Rome
+    "m6a":   0.95,   # Milan
+    "c6a":   0.95,   # Milan
+    "r6a":   0.95,   # Milan
+    "g5":    0.95,   # A10G host, Milan
+    "g6":    0.95,   # L4 / L40S host (g6, g6e), Milan
+    "p5":    0.95,   # H100 / H200 host, Milan
+    "hpc6a": 1.10,   # Milan, no SMT
+    "m7a":   1.35,   # Genoa, no SMT
+    "c7a":   1.35,   # Genoa, no SMT
+    "r7a":   1.35,   # Genoa, no SMT
+    "hpc7a": 1.35,   # Genoa, no SMT
+    # Graviton (Arm, no SMT)
+    "a1":    0.70,   # Graviton1
+    "m6g":   0.90,   # Graviton2
+    "c6g":   0.90,   # Graviton2
+    "r6g":   0.90,   # Graviton2
+    "x2g":   0.90,   # Graviton2, memory-optimized
+    "g5g":   0.90,   # T4G host, Graviton2
+    "i4g":   0.90,   # Graviton2, storage-optimized
+    "im4g":  0.90,   # Graviton2, storage-optimized
+    "is4g":  0.90,   # Graviton2, storage-optimized
+    "m7g":   1.10,   # Graviton3
+    "c7g":   1.10,   # Graviton3
+    "r7g":   1.10,   # Graviton3
+    "hpc7g": 1.10,   # Graviton3E
+    "m8g":   1.35,   # Graviton4
+    "c8g":   1.35,   # Graviton4
+    "r8g":   1.35,   # Graviton4
+    "x8g":   1.35,   # Graviton4, memory-optimized
+}
+_AWS_ATTRIBUTE_SUFFIXES = "bdenz"
+
+
+def _aws_family(instance_type: str) -> str:
+    """Base family for an EC2 instance type, e.g. ``"m6i"`` from ``"m6idn.xlarge"``.
+
+    Strips ``-flex`` and trailing attribute letters until the family is in
+    AWS_PERF_FACTORS (exact entries such as ``m5zn`` match first). Processor
+    letters (g, i, a) are never stripped.
+    """
+    family = instance_type.split(".")[0].lower().removesuffix("-flex")
+    while (
+        family not in AWS_PERF_FACTORS
+        and len(family) > 1
+        and family[-1] in _AWS_ATTRIBUTE_SUFFIXES
+    ):
+        family = family[:-1]
+    return family
+
 
 def perf_factor_for(machine_id: str) -> float:
     """Look up the relative per-vCPU performance factor for a machine id.
 
-    The family token is the part before the first ``-`` (e.g. ``"c3"`` from
-    ``"c3-standard-44"``). Unknown families return the baseline ``1.0`` so an
-    unrecognized id is scored on raw counts, exactly as before this table existed.
+    GCP ids use the token before the first ``-`` (``"c3"`` from
+    ``"c3-standard-44"``) in PERF_FACTORS. AWS instance types, which always
+    contain a ``.`` (``"m7i.2xlarge"``), resolve their base family in
+    AWS_PERF_FACTORS. Unknown families return the baseline ``1.0`` so an
+    unrecognized id is scored on raw counts, exactly as before these tables existed.
 
     Providers call this to populate ``MachineType.perf_factor``; the scorer itself
     only reads the field, so an instance with ``perf_factor=None`` is unaffected.
     """
+    if "." in machine_id:
+        return AWS_PERF_FACTORS.get(_aws_family(machine_id), 1.0)
     family = machine_id.split("-")[0].lower()
     return PERF_FACTORS.get(family, 1.0)
 
@@ -107,15 +217,27 @@ def perf_factor_for(machine_id: str) -> float:
 # instance declares gpu_type. VRAM remains a hard floor in filter.py.
 #
 # Source basis: vendor-published peak dense FP16/BF16 tensor TFLOPS, normalized to
-# H100. Read 2026-06-23. Indicative, overridable, refreshed as new SKUs land.
+# H100. Read 2026-06-23; AWS accelerators (h200, l40s, a10g, v520, m60, k80) added
+# 2026-10-24. Indicative, overridable, refreshed as new SKUs land.
+#
+# Lookup takes the first key contained in the gpu_type string, so a key that is a
+# substring of another (l4 in l40s) must come after it. Accelerators faster than
+# the H100 reference (e.g. B200) are not listed yet: adding one would raise the
+# full-credit reference and shift every existing GPU score.
 GPU_CLASS: dict[str, float] = {
     "h100": 1.00,   # Hopper, ~990 TFLOPS BF16 dense
+    "h200": 1.00,   # Hopper, same compute as H100 with more HBM
+    "l40s": 0.37,   # Ada, ~362 TFLOPS BF16 dense (before l4: "l4" is in "l40s")
     "a100": 0.32,   # Ampere, ~312 TFLOPS (40GB and 80GB share compute)
     "v100": 0.13,   # Volta, ~125 TFLOPS FP16
     "l4":   0.12,   # Ada, ~121 TFLOPS BF16 dense
-    "t4":   0.07,   # Turing, ~65 TFLOPS FP16
+    "a10g": 0.07,   # Ampere, AWS A10 variant at lower clocks, ~70 TFLOPS FP16 dense
+    "t4":   0.07,   # Turing, ~65 TFLOPS FP16 (also matches the Arm-host T4G)
     "p100": 0.02,   # Pascal, ~19 TFLOPS FP16
+    "v520": 0.02,   # AMD Radeon Pro V520, ~15 TFLOPS FP16, no tensor cores
     "p4":   0.01,   # Pascal, ~5 TFLOPS FP16
+    "m60":  0.01,   # Maxwell, ~10 TFLOPS FP32, no FP16 tensor cores
+    "k80":  0.01,   # Kepler, ~9 TFLOPS FP32, no FP16 tensor cores
 }
 _GPU_CLASS_REFERENCE = max(GPU_CLASS.values())   # full credit at one top-class GPU
 

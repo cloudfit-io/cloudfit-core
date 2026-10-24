@@ -162,7 +162,7 @@ When both `headroom` and `ram_floor_gb` are set, the RAM floor is the larger of 
 
 ### Effective capacity
 
-Machine families differ in per-core speed, so 32 vCPUs of c3 do more work than 32 vCPUs of t2d. `MachineType.perf_factor` captures this relative to an n2 baseline of 1.0, and the scorer uses it twice: vCPU fit is measured on effective capacity (`vcpu × perf_factor`), and cost is divided by it (cost per unit of work). Providers populate it from the documented `PERF_FACTORS` table (19 GCP families) via `perf_factor_for(machine_id)`; set it yourself to override. With `perf_factor` unset, scoring is unchanged.
+Machine families differ in per-core speed, so 32 vCPUs of c3 do more work than 32 vCPUs of t2d. `MachineType.perf_factor` captures this relative to an n2 baseline of 1.0, and the scorer uses it twice: vCPU fit is measured on effective capacity (`vcpu × perf_factor`), and cost is divided by it (cost per unit of work). Providers populate it via `perf_factor_for(machine_id)` from two documented tables on the same n2 scale: `PERF_FACTORS` (19 GCP families) and `AWS_PERF_FACTORS` (EC2 families from Ivy Bridge to Graviton4, with attribute variants such as `m6idn` resolving to `m6i`). AWS instance types (they contain a `.`, like `m7i.2xlarge`) use the AWS table, so names both clouds reuse for different hardware, such as `c3`, never collide. Set `perf_factor` yourself to override. With `perf_factor` unset, scoring is unchanged.
 
 ```python
 from cloudfit import MachineType, WorkloadProfile, perf_factor_for, rank
@@ -193,7 +193,7 @@ print(rank(profile, candidates)[0].reason)
 
 ### GPU throughput
 
-For the `gpu` archetype, when an instance declares `gpu_type`, the GPU term scores accelerator throughput (`gpu_count × GPU_CLASS[type]`, relative to an H100) instead of VRAM fit, so an A100 outranks a T4 at equal VRAM. The `GPU_CLASS` table covers H100, A100, V100, L4, T4, P100, and P4; `gpu_class_for(gpu_type)` resolves accelerator names. VRAM stays a hard floor either way, and without `gpu_type` the GPU term falls back to VRAM fit.
+For the `gpu` archetype, when an instance declares `gpu_type`, the GPU term scores accelerator throughput (`gpu_count × GPU_CLASS[type]`, relative to an H100) instead of VRAM fit, so an A100 outranks a T4 at equal VRAM. The `GPU_CLASS` table covers H100, H200, L40S, A100, V100, L4, A10G, T4 (and T4G), P100, Radeon Pro V520, P4, M60, and K80; `gpu_class_for(gpu_type)` resolves accelerator names. VRAM stays a hard floor either way, and without `gpu_type` the GPU term falls back to VRAM fit.
 
 ---
 
@@ -354,7 +354,7 @@ cloudfit-core ships with documented gaps. Listed here in priority order, with pl
 | **GCP-only provider.** No AWS, Azure, or other cloud catalogs yet. | Cannot rank AWS/Azure instances | `cloudfit-provider-aws` is the next planned provider (DescribeInstanceTypes + Pricing API) |
 | **Partial commitments awareness.** Spot and 1-year committed-use prices are scored when a provider supplies them (`spot_price_hr`, `cud_1yr_price_hr`); multi-year CUDs, Savings Plans, Reserved Instances, and account-level committed-spend discounts are not yet factored. | Effective cost can still be overstated for customers with broader committed spend | Caller-provided `commitments` payload that discounts candidates against existing commitments |
 | **No quota / capacity awareness.** A recommendation may be technically valid but unlaunchable in a region with exhausted quota. | "Stuck in queue" failures | Optional `quota_snapshot` payload that hard-floors candidates exceeding remaining quota |
-| **Heuristic speed and GPU tables.** `PERF_FACTORS` and `GPU_CLASS` are documented, dated estimates (GCP families and common accelerators), not benchmarks of your workload. Unknown families and accelerators fall back to the baseline / VRAM fit. | Relative speed can be off for a given tool | Workload-specific factors calibrated from run history (see backtesting below) |
+| **Heuristic speed and GPU tables.** `PERF_FACTORS` and `GPU_CLASS` are documented, dated estimates (GCP and AWS families and common accelerators), not benchmarks of your workload. AWS burstable `t`-series factors are deliberately conservative because sustained use beyond the CPU-credit baseline is throttled or billed extra. Unknown families and accelerators fall back to the baseline / VRAM fit. | Relative speed can be off for a given tool | Workload-specific factors calibrated from run history (see backtesting below) |
 | **Snapshots are refreshed weekly, not live.** `cloudfit-api` and `cloudfit-ui` bundle an 875-instance, five-region JSON whose on-demand, spot, and committed-use prices are refreshed weekly from the GCP billing catalog via a scheduled pull request. GPU prices are not reconstructed and stay approximate. | Prices can lag by up to a week; GPU cost is approximate | Live registry refreshed hourly, versioned with provenance (`fetched_at`, `source_etag`) |
 | **No empirical validation.** The scoring model is documented and auditable but has not been backtested against historical batch outcomes. | Recommendations are model predictions, not evidence-backed claims | Backtest harness ingesting Nextflow / Cromwell run history to compare cloudfit picks against actual run results |
 
@@ -424,7 +424,7 @@ cloudfit-core/
 ├── cloudfit/
 │   ├── __init__.py         # exports rank, score_instance, key models
 │   ├── models.py           # WorkloadProfile, MachineType, ScoredInstance (pydantic v2)
-│   ├── scorer.py           # rank(), weights, PERF_FACTORS, GPU_CLASS, pricing modes
+│   ├── scorer.py           # rank(), weights, PERF_FACTORS (GCP, AWS), GPU_CLASS, pricing modes
 │   ├── filter.py           # hard_floor_check(): region, RAM, vCPU, GPU, status
 │   ├── disk.py             # compute_disk_tb(): dynamic disk sizing formula
 │   ├── yaml_loader.py      # from_yaml(): loads workload YAML schema
