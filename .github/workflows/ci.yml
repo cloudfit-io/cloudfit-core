@@ -25,7 +25,9 @@ jobs:
 
       - name: Install dependencies
         run: |
-          python -m pip install --upgrade pip
+          # setuptools too: older runner images preinstall a version with known CVEs,
+          # which pip-audit would (rightly) report.
+          python -m pip install --upgrade pip setuptools
           pip install -e ".[dev]" pip-audit
 
       - name: Lint with ruff

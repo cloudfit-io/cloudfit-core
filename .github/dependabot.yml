@@ -16,3 +16,6 @@ updates:
     groups:
       python:
         patterns: ["*"]
+    ignore:
+      # Pinned on purpose (ruff 0.17's new default rules broke CI); bump deliberately.
+      - dependency-name: ruff
