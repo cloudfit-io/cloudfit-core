@@ -30,6 +30,26 @@ class HeadroomMode(str, Enum):
     hard = "hard"   # guarantee: also raise the hard floor so sub-buffer instances are disqualified
 
 
+class CpuArch(str, Enum):
+    x86_64 = "x86_64"
+    arm64 = "arm64"
+
+
+# Spellings used by container platforms and OS tooling for the same two architectures.
+_CPU_ARCH_ALIASES: dict[str, str] = {
+    "amd64": "x86_64", "x86-64": "x86_64", "x64": "x86_64",
+    "aarch64": "arm64", "arm": "arm64",
+}
+
+
+def _coerce_cpu_arch(v: object) -> object:
+    """Accept CpuArch values and common aliases (amd64, aarch64); pass None through."""
+    if isinstance(v, str):
+        key = v.strip().lower()
+        return CpuArch(_CPU_ARCH_ALIASES.get(key, key))
+    return v
+
+
 class PricingMode(str, Enum):
     on_demand = "on_demand"   # standard on-demand price (default for stateful work)
     spot = "spot"             # preemptible/spot price (default for the burst archetype)
@@ -97,6 +117,19 @@ class WorkloadProfile(BaseModel):
         description="If set, only instances available in this region pass the hard floor.",
     )
     weights: Optional[dict[str, float]] = None
+    cpu_arch: Optional[CpuArch] = Field(
+        default=None,
+        description=(
+            "Hard floor: only instances with this CPU architecture qualify (x86_64 or "
+            "arm64; amd64 and aarch64 are accepted). Use it for tools built for one "
+            "architecture only. Unset allows both."
+        ),
+    )
+
+    @field_validator("cpu_arch", mode="before")
+    @classmethod
+    def _coerce_profile_cpu_arch(cls, v: object) -> object:
+        return _coerce_cpu_arch(v)
 
     @field_validator("archetype", mode="before")
     @classmethod
@@ -225,6 +258,18 @@ class MachineType(BaseModel):
     region: str = "us-central1"
     status: str = "active"
     generation: Optional[str] = None
+    cpu_arch: Optional[CpuArch] = Field(
+        default=None,
+        description=(
+            "CPU architecture (x86_64 or arm64). When unset, the cpu_arch hard floor "
+            "infers it from the id via cloudfit.cpu_arch_for."
+        ),
+    )
+
+    @field_validator("cpu_arch", mode="before")
+    @classmethod
+    def _coerce_instance_cpu_arch(cls, v: object) -> object:
+        return _coerce_cpu_arch(v)
     perf_factor: Optional[float] = Field(
         default=None,
         gt=0.0,

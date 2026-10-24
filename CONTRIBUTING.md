@@ -42,7 +42,8 @@ class MyCloudProvider(Provider):
 Set each `MachineType.status` to `active`, `deprecated`, or `tombstoned`; the
 scoring engine reads availability from that field. Also populate `perf_factor`
 (via `cloudfit.perf_factor_for`, or add the family to `PERF_FACTORS` for GCP or
-`AWS_PERF_FACTORS` for AWS; a new cloud gets its own table), `gpu_type`
+`AWS_PERF_FACTORS` for AWS; a new cloud gets its own table), `cpu_arch` (via
+`cloudfit.cpu_arch_for`, or extend it for a new cloud's naming scheme), `gpu_type`
 for GPU instances, and `spot_price_hr` / `cud_1yr_price_hr` where the cloud
 publishes them. Publish as `cloudfit-provider-<name>` on PyPI.
 

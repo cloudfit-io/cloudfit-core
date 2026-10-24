@@ -158,5 +158,6 @@ def from_dict(data: dict[str, Any]) -> WorkloadProfile:
         pricing_mode=w.get("pricing_mode"),
         providers=w.get("providers", ["gcp", "aws"]),
         region=w.get("region"),
+        cpu_arch=w.get("cpu_arch"),
         weights=w.get("weights"),
     )

@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 _No unreleased changes._
 
+## [0.11.0] - 2026-10-24
+
+### Added
+- **CPU architecture hard floor.** `WorkloadProfile.cpu_arch` (`x86_64` or `arm64`; `amd64` and `aarch64` accepted) disqualifies instances of the other architecture, with the reason `CPU architecture arm64 != required x86_64`. Use it for tools built for one architecture only: BCLConvert is x86_64-only, while the cheapest and fastest AWS picks are often Graviton. Unset, both architectures qualify as before. YAML profiles accept `cpu_arch` too.
+- `MachineType.cpu_arch`, a `CpuArch` enum, and `cpu_arch_for(machine_id)`, which infers the architecture from GCP and AWS ids (Graviton families, GCP `t2a` / `c4a` / `n4a` / `a4x`, Apple silicon Macs). The floor uses it when an instance's `cpu_arch` is unset, so existing snapshots and hand-built candidate lists are covered without changes; an id matching neither naming scheme passes. Checked against the processor model AWS lists for all 1,410 us-east-1 instance types, with no mismatches.
+
 ## [0.10.3] - 2026-10-24
 
 ### Added

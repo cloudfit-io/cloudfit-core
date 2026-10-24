@@ -100,6 +100,24 @@ profile = WorkloadProfile(
 
 This pairs naturally with multi-region provider snapshots: `cloudfit-provider-gcp.fetch_instances_all_regions(...)` emits one `MachineType` entry per region the family is available in, and the region hard floor selects the right subset at scoring time. Useful when a pipeline runs in a specific region and you only want candidates that can actually launch there.
 
+### CPU architecture
+
+Many tools ship for one CPU architecture only (BCLConvert is x86_64-only), and the cheapest, fastest pick is often an Arm instance such as AWS Graviton. Set `cpu_arch` to keep recommendations runnable:
+
+```python
+from cloudfit import WorkloadProfile, MachineType, rank
+
+profile = WorkloadProfile(vcpu=16, ram_gb=64, cpu_arch="x86_64")   # amd64 / aarch64 also accepted
+
+results = rank(profile, [
+    MachineType(id="m8g.4xlarge", provider="aws", vcpu=16, ram_gb=64, price_hr=0.72),
+    MachineType(id="m7i.4xlarge", provider="aws", vcpu=16, ram_gb=64, price_hr=0.81),
+])
+print(results[-1].disqualify_reason)   # CPU architecture arm64 != required x86_64
+```
+
+The floor uses `MachineType.cpu_arch` when a provider sets it, and otherwise infers the architecture from the id with `cpu_arch_for(machine_id)`: AWS Graviton families (`m8g`, `c7gn`, `x2gd`, `t4g`, `a1`, ...), GCP Arm families (`t2a`, `c4a`, `n4a`, `a4x`), and Apple silicon Macs are `arm64`; other GCP and AWS types are `x86_64`. An id that matches neither naming scheme passes, rather than being guessed. Leave `cpu_arch` unset to consider both.
+
 ---
 
 ## How scoring works
@@ -119,7 +137,7 @@ The `optimize_for` mode sets the weights:
 | `performance` | 0.10 | 0.80 | 0.10 | Latency-sensitive, GPU inference |
 | `availability` | 0.10 | 0.20 | 0.70 | Long-running jobs, deprecation risk |
 
-**Hard floor filters** run before scoring: region (when set), RAM, vCPU, GPU presence, GPU VRAM, and lifecycle status (tombstoned instances are always out). Instances that fail are eliminated entirely, not just ranked low, and carry a plain-language `disqualify_reason`.
+**Hard floor filters** run before scoring: region (when set), RAM, vCPU, GPU presence, GPU VRAM, lifecycle status (tombstoned instances are always out), and CPU architecture (when set). Instances that fail are eliminated entirely, not just ranked low, and carry a plain-language `disqualify_reason`.
 
 **Cost is cost per unit of work, normalized across the candidates**, not against a fixed scale. Each candidate's cost basis is its price in the active [pricing mode](#pricing-modes) divided by its [`perf_factor`](#effective-capacity), so a faster family is cheaper per unit of work even at a higher hourly price. The cheapest qualifying basis scores 1.0 on cost and every other candidate scores the cheapest basis divided by its own, so one costing twice as much per unit of work scores 0.5. Because it is a ratio, one very expensive qualifying instance (say a $250/hr GPU box that also meets a 16 vCPU request) cannot squeeze the sensibly sized options together. An instance with no price (`price_hr <= 0`, e.g. a pricing lookup that failed) scores 0.0 on cost; a missing price is never treated as free.
 
@@ -279,6 +297,7 @@ workload:
   optimize_for: balanced   # cost | performance | availability | balanced
   pricing_mode: on_demand  # on_demand | spot | cud_1yr (optional)
   region: us-central1      # optional region hard floor
+  cpu_arch: x86_64         # optional: x86_64 | arm64 (amd64 / aarch64 accepted)
   providers:
     - gcp
     - aws
@@ -435,7 +454,8 @@ cloudfit-core/
 │   ├── __init__.py         # exports rank, score_instance, key models
 │   ├── models.py           # WorkloadProfile, MachineType, ScoredInstance (pydantic v2)
 │   ├── scorer.py           # rank(), weights, PERF_FACTORS (GCP, AWS), GPU_CLASS, pricing modes
-│   ├── filter.py           # hard_floor_check(): region, RAM, vCPU, GPU, status
+│   ├── filter.py           # hard_floor_check(): region, RAM, vCPU, GPU, status, CPU architecture
+│   ├── arch.py             # cpu_arch_for(): x86_64 vs arm64 from a machine id
 │   ├── disk.py             # compute_disk_tb(): dynamic disk sizing formula
 │   ├── yaml_loader.py      # from_yaml(): loads workload YAML schema
 │   ├── py.typed            # ships type hints (PEP 561)
@@ -447,6 +467,7 @@ cloudfit-core/
     ├── test_perf_factor.py   # effective capacity and PERF_FACTORS lookups
     ├── test_cost_realism.py  # pricing modes, cost per unit of work
     ├── test_gpu_class.py     # GPU throughput and GPU_CLASS lookups
+    ├── test_cpu_arch.py      # cpu_arch hard floor and cpu_arch_for lookups
     ├── test_disk.py          # disk formula, CBCL vs BCL factor, sequencer profiles
     └── test_yaml.py          # from_yaml() loads profiles correctly
 ```
