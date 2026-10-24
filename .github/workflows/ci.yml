@@ -25,10 +25,8 @@ jobs:
 
       - name: Install dependencies
         run: |
-          # setuptools too: older runner images preinstall a version with known CVEs,
-          # which pip-audit would (rightly) report.
-          python -m pip install --upgrade pip setuptools
-          pip install -e ".[dev]" pip-audit
+          python -m pip install --upgrade pip
+          pip install -e ".[dev]"
 
       - name: Lint with ruff
         run: ruff check cloudfit/
@@ -39,13 +37,25 @@ jobs:
       - name: Run tests
         run: pytest tests/ -v --tb=short --cov=cloudfit --cov-report=term --cov-fail-under=90
 
-      # Known vulnerabilities in the installed dependency tree (the package under
-      # test is installed in editable mode and skipped; it is not on PyPI at this commit).
-      - name: Audit dependencies
-        run: pip-audit --skip-editable
+  # Known vulnerabilities in what users install: the package's runtime
+  # dependencies, resolved in isolation (not the test tooling in the job above).
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Set up Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+
+      - name: Audit runtime dependencies
+        run: |
+          python -m pip install --upgrade pip pip-audit
+          pip-audit .
 
   publish:
-    needs: test
+    needs: [test, audit]
     runs-on: ubuntu-latest
     if: startsWith(github.ref, 'refs/tags/v')
     environment:
